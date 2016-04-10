@@ -1,6 +1,8 @@
+import os
 import ilms
 from ilms.request import RequestProxyer
 from ilms.parser import *
+from ilms.utils import ProgressBar
 
 
 class iLms:
@@ -36,7 +38,27 @@ class iLms:
         resp = self.requests.get(ilms.config.doclist % course_id)
         return parse_doc_list(resp.text)
 
-    def get_doc_detail(self, course_id, material_id):
+    def get_doc_detail(self, course_id, material_id, download=False):
         resp = self.requests.get(ilms.config.docdetail
                                  % (course_id, material_id))
         return parse_doc_detail(resp.text)
+
+    def download(self, attach_id, folder='download'):
+        resp = self.requests.get(ilms.config.attach % attach_id, stream=True)
+
+        filename = resp.headers['content-disposition'].split("'")[-1]
+        filesize = int(resp.headers['content-length'])
+
+        os.makedirs(folder, exist_ok=True)
+        path = os.path.join(folder, filename)
+
+        chunk_size = 1024
+        progress = ProgressBar()
+        progress.max = filesize // chunk_size
+        with open(path, 'wb') as f:
+            for chunk in resp.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                progress.next()
+        progress.finish()
+        return filename

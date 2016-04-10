@@ -15,9 +15,9 @@ def parse_course_list(body):
     for item in pr.soup.select('.mnuItem')[:-2]:
         c, c_detail = item.find('a'), item.find('span')
         pr.result.append({
-            'ilms_id': c.get('href').split('/')[-1],
+            'course_id': c.get('href').split('/')[-1],
             'course_name': c.text,
-            'course_id': c_detail.text
+            'school_course_id': c_detail.text
         })
     return pr
 
