@@ -12,7 +12,7 @@ def encode_utf8(func):
 
 class RequestProxyer:
 
-    def __init__(self, session):
+    def __init__(self, session=None):
         self.session = session
 
     @encode_utf8
