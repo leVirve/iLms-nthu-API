@@ -1,6 +1,6 @@
 import requests
 
-from ilms import config
+from ilms.route import route
 
 
 class LoginError(Exception):
@@ -17,7 +17,7 @@ class User:
 
     def login(self):
         resp = self.session.post(
-                config.login,
+                route.login_submit,
                 data={'account': self.uid, 'password': self.pwd})
         json = resp.json()
         if json['ret']['status'] == 'false':

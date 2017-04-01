@@ -98,7 +98,7 @@ def parse_homework_detail(body):
     pr.result['date_string'] = date
     pr.result['date'] = parse_datetime(date)
 
-    pr.result['content'] = tr[6].select('td')[1].text
+    pr.result['content'] = tr[6].select('td')[1].text  # not rich text
     pr.result['links'] = [a.get('href') for a in tr[7].select('a')]
 
     td = tr[7].select('td')[1]
@@ -135,7 +135,8 @@ def parse_post_detail(json):
         comment = {
             'name': item['name'],
             'date': item['date'],
-            'note': html2text(item['note'])
+            # 'note': html2text(item['note'])
+            'note': item['note']
         }
         comment.update({
             'attachments': [(e['id'], e['srcName']) for e in item['attach']]
