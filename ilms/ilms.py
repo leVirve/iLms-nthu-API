@@ -1,67 +1,114 @@
 import os
 
+from ilms import parser
 from ilms.route import route
 from ilms.request import RequestProxyer
-from ilms.parser import *
 from ilms.utils import ProgressBar
 
 
-class iLms:
+class Homework():
 
-    def __init__(self, session):
-        self.session = session
+    def __init__(self, raw, callee):
+        self.raw = raw
+        self.callee = callee
+        self.homework_id = raw['id']
+
+    def detail(self, download=False):
+        resp = self.callee.callee.requests.get(
+            route.course(self.callee.course_id).homework(self.homework_id))
+        if download:
+            pass
+        return parser.parse_homework_detail(resp.text)
+
+
+class Material():
+
+    def __init__(self, raw, callee):
+        self.raw = raw
+        self.callee = callee
+        self.material_id = raw['id']
+
+    def detail(self, download=False):
+        resp = self.callee.callee.requests.get(
+            route.course(self.callee.course_id).document(self.material_id))
+        if download:
+            pass
+        return parser.parse_material_detail(resp.text)
+
+
+class Course():
+
+    def __init__(self, raw, callee):
+        self.raw = raw
+        self.callee = callee
+        self.course_id = raw['id']
+
+    def get_homeworks(self):
+        resp = self.callee.requests.get(route.course(self.course_id).homework())
+        self.homeworks = [
+            Homework(homework, callee=self)
+            for homework in parser.parse_homework_list(resp.text).result
+        ]
+        return self.homeworks
+
+    def get_materials(self, download=False):
+        resp = self.callee.requests.get(route.course(self.course_id).document())
+        self.materials = [
+            Material(material, callee=self)
+            for material in parser.parse_material_list(resp.text).result
+        ]
+        return self.materials
+
+    def get_forum_list(self, page=1):
+        resp = self.callee.requests.get(
+            route.course(self.course_id).forum() + '&page=%d' % page)
+        return parser.parse_forum_list(resp.text)
+
+
+class System():
+
+    def __init__(self, user):
+        self.session = user.session
         self.requests = RequestProxyer(self.session)
+        self.profile = None
+        self.courses = None
 
     def get_profile(self):
         resp = self.requests.get(route.profile)
-        return parse_profile(resp.text)
+        self.profile = parser.parse_profile(resp.text)
+        return self.profile
 
-    def get_course_list(self):
+    def get_courses(self):
         resp = self.requests.get(route.home)
-        return parse_course_list(resp.text)
-
-    def get_homework_list(self, course_id):
-        resp = self.requests.get(route.course(course_id).homework())
-        return parse_homework_list(resp.text)
-
-    def get_homework_detail(self, course_id, homwework_id, download=False):
-        resp = self.requests.get(route.course(course_id).homework(homwework_id))
-        if download:
-            pass
-        return parse_homework_detail(resp.text)
-
-    def get_forum_list(self, course_id, page=1):
-        resp = self.requests.get(route.course(course_id).forum(page))
-        return parse_forum_list(resp.text)
+        self.courses = [
+            Course(course, callee=self)
+            for course in parser.parse_course_list(resp.text).result]
+        return self.courses
 
     def get_post_detail(self, post_id):
         resp = self.requests.post(route.post, data={'id': post_id})
-        return parse_post_detail(resp.json())
-
-    def get_doc_list(self, course_id, download=False):
-        resp = self.requests.get(route.course(course_id).document())
-        return parse_doc_list(resp.text)
-
-    def get_doc_detail(self, course_id, material_id, download=False):
-        resp = self.requests.get(route.course(course_id).document(material_id))
-        return parse_doc_detail(resp.text)
+        return parser.parse_post_detail(resp.json())
 
     def download(self, attach_id, folder='download'):
-        resp = self.requests.get(route.attach.format(attach_id=attach_id), stream=True)
+        return download(self.requests, attach_id, folder)
 
-        filename = resp.headers['content-disposition'].split("'")[-1]
-        filesize = int(resp.headers['content-length'])
 
-        os.makedirs(folder, exist_ok=True)
-        path = os.path.join(folder, filename)
+def download(sess, attach_id, folder='download'):
+    resp = sess.get(route.attach.format(attach_id=attach_id), stream=True)
 
-        chunk_size = 1024
-        progress = ProgressBar()
-        progress.max = filesize // chunk_size
-        with open(path, 'wb') as f:
-            for chunk in resp.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                progress.next()
-        progress.finish()
-        return filename
+    filename = resp.headers['content-disposition'].split("'")[-1]
+    filesize = int(resp.headers['content-length'])
+
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, filename)
+
+    chunk_size = 1024
+    progress = ProgressBar()
+    progress.max = filesize // chunk_size
+    with open(path, 'wb') as f:
+        for chunk in resp.iter_content(chunk_size=chunk_size):
+            if chunk:
+                f.write(chunk)
+            progress.next()
+    progress.finish()
+    return filename

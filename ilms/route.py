@@ -15,7 +15,7 @@ class CourseRoute():
     }
 
     rule_key = {
-        'forum_detail': 'page',
+        'forum_detail': 'tid',
         'homework_detail': 'hw',
         'document_detail': 'cid',
     }

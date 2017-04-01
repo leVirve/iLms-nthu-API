@@ -114,18 +114,28 @@ def parse_homework_detail(body):
 
 def parse_forum_list(body):
     pr = ParseResult(body)
-    for row in pr.soup.select('tr')[1::2]:
-        item = row.select('td')
-        pr.result.append((
-            item[0].text.strip(),
-            item[1].text.strip()
-        ))
-    pages = len(pr.soup.select('.page span')) - 2
-    curr_page = pr.soup.select_one('.page .curr').text
-    pr.extra = {
-        'pages': pages if pages > 0 else 1,
-        'curr_page': curr_page if pages > 0 else 1
-    }
+    main = pr.soup.select_one('#main')
+    if '目前尚無資料' in main.text:
+        return pr
+
+    for tr in main.select('tr')[1::2]:
+        td = tr.select('td')
+        pr.result.append({
+            'id': td[0].text.strip(),
+            'title': td[1].text.strip(),
+            'count': td[2].find('span').text,
+            'subtitle': td[3].text.strip()
+        })
+
+    page_info = pr.soup.select('.page span')
+    if page_info:
+        pages = len(page_info) - 2
+        curr_page = pr.soup.select_one('.page .curr').text
+        pr.extra = {
+            'pages': pages if pages > 0 else 1,
+            'curr_page': curr_page if pages > 0 else 1
+        }
+
     return pr
 
 
@@ -145,7 +155,7 @@ def parse_post_detail(json):
     return pr
 
 
-def parse_doc_list(body):
+def parse_material_list(body):
     pr = ParseResult(body)
     rows = pr.soup.select('tr')
     head = [e.text for e in rows[0].select('td')]
@@ -154,12 +164,12 @@ def parse_doc_list(body):
             k: v.text.strip()
             for k, v in zip(head, row.select('td'))
         }
-        item['material_id'] = row.select_one('a').get('href').split('=')[-1]
+        item['id'] = row.select_one('a').get('href').split('=')[-1]
         pr.result.append(item)
     return pr
 
 
-def parse_doc_detail(body):
+def parse_material_detail(body):
     pr = ParseResult(body)
     title = pr.soup.select_one('.doc .title').text.strip()
     content = pr.soup.select_one('.doc .article').text.strip()
