@@ -6,34 +6,39 @@ from ilms.request import RequestProxyer
 from ilms.utils import ProgressBar
 
 
-class Homework():
+class Item():
+
+    def download(self):
+        for target in self.details:
+            download(self.callee.callee.requests, target['id'])
+
+
+class Homework(Item):
 
     def __init__(self, raw, callee):
         self.raw = raw
         self.callee = callee
-        self.homework_id = raw['id']
+        self.uid = raw['id']
 
-    def detail(self, download=False):
+    def detail(self):
         resp = self.callee.callee.requests.get(
-            route.course(self.callee.course_id).homework(self.homework_id))
-        if download:
-            pass
-        return parser.parse_homework_detail(resp.text)
+            route.course(self.callee.course_id).homework(self.uid))
+        self.details = parser.parse_homework_detail(resp.text).result
+        return self.details
 
 
-class Material():
+class Material(Item):
 
     def __init__(self, raw, callee):
         self.raw = raw
         self.callee = callee
-        self.material_id = raw['id']
+        self.uid = raw['id']
 
-    def detail(self, download=False):
+    def detail(self):
         resp = self.callee.callee.requests.get(
-            route.course(self.callee.course_id).document(self.material_id))
-        if download:
-            pass
-        return parser.parse_material_detail(resp.text)
+            route.course(self.callee.course_id).document(self.uid))
+        self.details = parser.parse_material_detail(resp.text).result
+        return self.details
 
 
 class Course():

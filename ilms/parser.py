@@ -177,7 +177,7 @@ def parse_material_detail(body):
     pr.result = [
         {
             'filename': a.get('title'),
-            'attachment_id': a.get('href').split('=')[-1],
+            'id': a.get('href').split('=')[-1],
             'filesize': hint.text[1:-2]
         }
         for a, hint in zip(
