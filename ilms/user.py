@@ -16,11 +16,11 @@ class User:
         self.email = None
 
     def login(self):
-        resp = self.session .post(
+        resp = self.session.post(
                 config.login,
                 data={'account': self.uid, 'password': self.pwd})
         json = resp.json()
         if json['ret']['status'] == 'false':
             raise LoginError
         self.email = json['ret']['email']
-        return True
+        return json

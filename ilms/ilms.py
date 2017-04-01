@@ -12,6 +12,10 @@ class iLms:
         self.session = session
         self.requests = RequestProxyer(self.session)
 
+    def get_profile(self):
+        resp = self.requests.get(ilms.config.profile)
+        return parse_profile(resp.text)
+
     def get_course_list(self):
         resp = self.requests.get(ilms.config.home)
         return parse_course_list(resp.text)

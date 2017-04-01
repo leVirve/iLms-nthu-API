@@ -1,4 +1,7 @@
-from html2text import html2text
+import re
+from datetime import datetime
+
+# from html2text import html2text
 from bs4 import BeautifulSoup
 
 
@@ -9,44 +12,103 @@ class ParseResult:
         self.result = []
         self.extra = {}
 
+pad = ['', ' ', '  ', '   ', ]
+
+
+def parse_zh_en_course_name(course_name):
+    course_name_en = re.findall('[A-Za-z()0-9 ]+', course_name)[-1]
+    course_name_zh = course_name.replace(course_name_en, '')
+    return {'en': course_name_en, 'zh': course_name_zh}
+
+
+def fix_course_id_padding(course_id):
+    dept = re.search('[A-Z]+', course_id).group()
+    dept_padded = dept + pad[4 - len(dept)]
+    return course_id.replace(dept, dept_padded)
+
+
+def parse_datetime(date_string):
+    return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
+
+
+def parse_profile(body):
+    pr = ParseResult(body)
+    name = pr.soup.select_one('#fmName').get('value')
+    email = pr.soup.select_one('#fmEmail').get('value')
+    pr.result = {'name': name, 'email': email}
+    return pr
+
 
 def parse_course_list(body):
     pr = ParseResult(body)
-    for item in pr.soup.select('.mnuItem')[:-2]:
-        c, c_detail = item.find('a'), item.find('span')
+    mnu = pr.soup.select('.mnu')[0]
+    course_url_regex = re.compile('/course/(\d+)')
+
+    for item in mnu.select('.mnuItem'):
+        course_a = item.find('a')
+        match = course_url_regex.match(course_a.get('href'))
+        if not match:
+            continue
+        course_id = re.sub('[()]', '', item.find('span').text)
         pr.result.append({
-            'course_id': c.get('href').split('/')[-1],
-            'course_name': c.text,
-            'school_course_id': c_detail.text
+            'id': match.group(1),
+            'name': parse_zh_en_course_name(course_a.text),
+            'course_id': fix_course_id_padding(course_id)
         })
     return pr
 
 
 def parse_homework_list(body):
     pr = ParseResult(body)
-    for row in pr.soup.select('tr')[1:]:
-        a = row.select_one('a')
+    main = pr.soup.select_one('#main')
+    if '目前尚無資料' in main.text:
+        return pr
+
+    for row in main.select('tr')[1:]:
+        td = row.find_all('td')
+        href = td[1].select_one('a').get('href')
+        date = td[4].find('span').get('title')
         pr.result.append({
-            'homework_id': a.get('href').split('=')[-1],
-            'title': a.text.strip(),
-            'deadline': row.select('td')[4].text.strip()
+            'id': re.match('.*hw=(\d+).*', href).group(1),
+            'title': td[1].text.strip(),
+            'date_string': date,
+            'date': parse_datetime(date)
         })
     return pr
 
 
 def parse_homework_detail(body):
     pr = ParseResult(body)
-    pr.result = {'title': pr.soup.select_one('.curr').text}
-    for i, row in enumerate(pr.soup.select('tr')[1:]):
-        k, v = row.select('td')
-        pr.result[k.text] = v.text
-        if i == 5:
-            pr.result['raw_description'] = v
-        elif i == 6:
-            pr.result[k.text] = [
-                (a.text.strip(), a.get('href').split('=')[-1], span.text[1:-2])
-                for a, span in zip(v.select('a'), v.select('span'))
-            ]
+    tr = pr.soup.select('tr')
+
+    def trs_helper(trs):
+        for row in trs:
+            k, v = row.select('td')
+            yield k.text, v.text
+
+    pr.result = {'title': pr.soup.select_one('#main span.curr').text.strip()}
+    pr.result['extra'] = {
+        k: v
+        for i, (k, v) in enumerate(trs_helper(tr))
+        if i not in [0, 5, 6, 7]
+        # header, date, description, attachments
+    }
+
+    date = tr[5].select('td')[1].text + ':00'
+    pr.result['date_string'] = date
+    pr.result['date'] = parse_datetime(date)
+
+    pr.result['content'] = tr[6].select('td')[1].text
+    pr.result['links'] = [a.get('href') for a in tr[7].select('a')]
+
+    td = tr[7].select('td')[1]
+    attach_id_regex = re.compile('.*id=(\d+).*')
+    pr.result['attachments'] = [
+            {'name': a.text.strip(),
+             'id': attach_id_regex.match(a.get('href')).group(1),
+             'size': re.sub('[()]', '', span.text)}
+            for a, span in zip(td.select('a'), td.select('span'))
+        ]
     return pr
 
 
