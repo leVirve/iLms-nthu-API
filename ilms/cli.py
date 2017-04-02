@@ -1,10 +1,8 @@
-import os
-import json
-import getpass
 import argparse
 
 import ilms
 from ilms.core import User, Core as iLms
+from ilms.utils import get_account
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
@@ -17,29 +15,6 @@ parser.add_argument(
     '-V', '--version', action='version', version=ilms.__version__)
 
 
-def get_account():
-    global _account, _password
-    _config = {'account': input('iLms account:'),
-               'password': getpass.getpass(prompt='Password:')}
-    _account = _config.get('account')
-    _password = _config.get('password')
-    with open(_config_file, 'w') as f:
-        f.write(json.dumps(_config, indent=4))
-
-
-_config_file = os.path.expanduser(os.path.join(ilms._ilms_dir, 'ilms.json'))
-
-if os.path.exists(_config_file):
-    _config = json.load(open(_config_file))
-    _account = _config.get('account')
-    _password = _config.get('password')
-    if not _account or not _password:
-        get_account()
-
-if not os.path.exists(_config_file):
-    get_account()
-
-
 def print_course_list(ilms):
     for cou in ilms.get_courses():
         print(cou)
@@ -48,6 +23,7 @@ def print_course_list(ilms):
 def main(args=None):
     args = args or parser.parse_args()
 
+    _account, _password = get_account()
     user = User(_account, _password)
     assert user.login()
 
@@ -55,3 +31,8 @@ def main(args=None):
 
     if args.courses:
         print_course_list(ilms)
+
+
+# ilms download handin --course_id CS35700 --homework Homework1
+# ilms download handin --course_id CS35700 --homework Homework1 --student 10502561 / 陳xx
+# ilms download material --course_id CS35700 --num 5
