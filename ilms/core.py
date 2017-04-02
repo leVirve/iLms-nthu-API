@@ -50,6 +50,33 @@ class Item():
             download(target['id'])
 
 
+class ItemContainer():
+
+    def __init__(self, parse_result, instance, callee):
+        self.items = [
+            instance(item, callee=callee)
+            for item in parse_result.result
+        ]
+
+    def __getitem__(self, x):
+        return self.items[x]
+
+    def __iter__(self):
+        return self.items.__iter__()
+
+    def get(self, x):
+        return self.items[x]
+
+    def find(self, **kwargs):
+        for item in self.items:
+            for k, v in kwargs.items():
+                value = getattr(item, k)
+                if value and isinstance(v, str) and v not in value:
+                    break
+            else:
+                return item
+
+
 class Handin(Item):
 
     @property
@@ -89,10 +116,11 @@ class Homework(Item):
             return self._handin_list
         resp = reqs.get(
             route.course(self.callee.id).homework_handin_list(self.uid))
-        self._handin_list = [
-            Handin(handin, callee=self)
-            for handin in parser.parse_homework_handin_list(resp.text).result
-        ]
+        self._handin_list = ItemContainer(
+            parser.parse_homework_handin_list(resp.text),
+            instance=Handin,
+            callee=self
+        )
         return self._handin_list
 
     def __str__(self):
@@ -115,18 +143,20 @@ class Course(Item):
 
     def get_homeworks(self):
         resp = reqs.get(route.course(self.uid).homework())
-        self.homeworks = [
-            Homework(homework, callee=self)
-            for homework in parser.parse_homework_list(resp.text).result
-        ]
+        self.homeworks = ItemContainer(
+            parser.parse_homework_list(resp.text),
+            instance=Homework,
+            callee=self
+        )
         return self.homeworks
 
     def get_materials(self, download=False):
         resp = reqs.get(route.course(self.uid).document())
-        self.materials = [
-            Material(material, callee=self)
-            for material in parser.parse_material_list(resp.text).result
-        ]
+        self.materials = ItemContainer(
+            parser.parse_material_list(resp.text),
+            instance=Material,
+            callee=self
+        )
         return self.materials
 
     def get_forum_list(self, page=1):
@@ -151,9 +181,11 @@ class Core():
 
     def get_courses(self):
         resp = reqs.get(route.home)
-        self.courses = [
-            Course(course, callee=self)
-            for course in parser.parse_course_list(resp.text).result]
+        self.courses = ItemContainer(
+            parser.parse_course_list(resp.text),
+            instance=Course,
+            callee=self
+        )
         return self.courses
 
     def get_post_detail(self, post_id):
