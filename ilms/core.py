@@ -28,6 +28,8 @@ class User:
         if json['ret']['status'] == 'false':
             raise LoginError
         self.email = json['ret']['email']
+        # TODO: not login too often if has saved session
+        reqs.save_session()
         return json
 
 

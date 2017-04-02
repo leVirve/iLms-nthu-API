@@ -1,5 +1,8 @@
-import requests
 from functools import partialmethod
+
+import requests
+
+from ilms import utils
 
 
 def encode_utf8(func):
@@ -13,7 +16,11 @@ def encode_utf8(func):
 class RequestProxyer:
 
     def __init__(self, session=None):
-        self.session = requests.Session()
+        sess = utils.load_session()
+        self.session = sess or session or requests.Session()
+
+    def save_session(self):
+        utils.save_session(self.session)
 
     @encode_utf8
     def request(*args, **kwagrs):
