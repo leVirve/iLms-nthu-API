@@ -1,15 +1,12 @@
 import os
 
 from ilms import parser
+from ilms import exception
 from ilms.route import route
 from ilms.request import RequestProxyer
 from ilms.utils import ProgressBar, unzip_all, check_is_download
 
 reqs = RequestProxyer()
-
-
-class LoginError(Exception):
-    pass
 
 
 class User:
@@ -19,15 +16,24 @@ class User:
         self.pwd = pwd
         self.email = None
 
+    def check_login(self):
+        try:
+            resp = reqs.get(route.profile)
+            parser.parse_profile(resp.text)
+            return True
+        except exception.PermissionDenied:
+            return False
+
     def login(self):
+        if self.check_login():
+            return True
         resp = reqs.post(
                 route.login_submit,
                 data={'account': self.user, 'password': self.pwd})
         json = resp.json()
         if json['ret']['status'] == 'false':
-            raise LoginError
+            raise exception.LoginError
         self.email = json['ret']['email']
-        # TODO: not login too often if has saved session
         reqs.save_session()
         return json
 
@@ -89,6 +95,7 @@ class Handin(Item):
 
     def download(self):
         folder_name = 'download/%s-%s' % (self.account_id, self.authour)
+        # TODO: check by datetime
         if check_is_download(folder_name):
             return
         for target in self.detail:

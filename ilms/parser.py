@@ -4,6 +4,8 @@ from datetime import datetime
 # from html2text import html2text
 from bs4 import BeautifulSoup
 
+from ilms import exception
+
 
 class ParseResult:
 
@@ -15,10 +17,10 @@ class ParseResult:
 pad = ['', ' ', '  ', '   ', ]
 
 
-def need_login(f):
+def need_login_check(f):
     def wrap(body, *args, **kwargs):
-        if '權限不足!' in body:
-            raise Exception('尚未登入')
+        if '權限不足' in body or 'No Permission!' in body:
+            raise exception.PermissionDenied('尚未登入')
         return f(body, *args, **kwargs)
     return wrap
 
@@ -39,6 +41,7 @@ def parse_datetime(date_string):
     return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
 
+@need_login_check
 def parse_profile(body):
     pr = ParseResult(body)
     name = pr.soup.select_one('#fmName').get('value')
@@ -47,7 +50,7 @@ def parse_profile(body):
     return pr
 
 
-@need_login
+@need_login_check
 def parse_course_list(body):
     pr = ParseResult(body)
     mnu = pr.soup.select('.mnu')[0]
@@ -67,7 +70,7 @@ def parse_course_list(body):
     return pr
 
 
-@need_login
+@need_login_check
 def parse_homework_list(body):
     pr = ParseResult(body)
     main = pr.soup.select_one('#main')
@@ -87,7 +90,7 @@ def parse_homework_list(body):
     return pr
 
 
-@need_login
+@need_login_check
 def parse_homework_detail(body):
     pr = ParseResult(body)
     tr = pr.soup.select('tr')
@@ -123,7 +126,7 @@ def parse_homework_detail(body):
     return pr
 
 
-@need_login
+@need_login_check
 def parse_homework_handin_list(body):
     pr = ParseResult(body)
     main = pr.soup.select_one('#main')
@@ -156,7 +159,7 @@ def parse_homework_handin_list(body):
     return pr
 
 
-@need_login
+@need_login_check
 def parse_homework_handin_detail(body):
     pr = ParseResult(body)
     main = pr.soup.select_one('#doc')
@@ -176,6 +179,7 @@ def parse_homework_handin_detail(body):
     return pr
 
 
+@need_login_check
 def parse_forum_list(body):
     pr = ParseResult(body)
     main = pr.soup.select_one('#main')
@@ -203,6 +207,7 @@ def parse_forum_list(body):
     return pr
 
 
+@need_login_check
 def parse_post_detail(json):
     pr = ParseResult()
     for item in json['posts']['items']:
@@ -219,6 +224,7 @@ def parse_post_detail(json):
     return pr
 
 
+@need_login_check
 def parse_material_list(body):
     pr = ParseResult(body)
     rows = pr.soup.select('tr')
@@ -233,6 +239,7 @@ def parse_material_list(body):
     return pr
 
 
+@need_login_check
 def parse_material_detail(body):
     pr = ParseResult(body)
     title = pr.soup.select_one('.doc .title').text.strip()
