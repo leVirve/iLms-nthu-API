@@ -17,6 +17,9 @@ pip install -U ilms-nthu
 from ilms.core import User
 from ilms.core import Core as iLms
 
+
+if __name__ == '__main__':
+
     user = User('<user_id>', '<password>')
     assert user.login()
 
