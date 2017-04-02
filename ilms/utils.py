@@ -1,4 +1,5 @@
 import os
+import glob
 import pickle
 import zipfile
 from pip._vendor.progress.bar import ShadyBar
@@ -22,11 +23,21 @@ class ProgressBar(ShadyBar):
             return 10
 
 
+def unzip_all(folder_name):
+    for zip_file in glob.glob('%s/*.zip' % folder_name):
+        unzip(zip_file, folder_name)
+
+
 def unzip(filepath, dest_folder):
     if filepath.endswith('.zip'):
         zip_ref = zipfile.ZipFile(filepath, 'r')
         zip_ref.extractall(dest_folder)
         zip_ref.close()
+
+
+def check_is_download(folder):
+    zip_type = ['*.zip', '*.rar']
+    return any([glob.glob('%s/%s' % (folder, ztype))] for ztype in zip_type)
 
 
 def get_home_dir():

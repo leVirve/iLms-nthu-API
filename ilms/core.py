@@ -1,10 +1,9 @@
 import os
-import glob
 
 from ilms import parser
 from ilms.route import route
 from ilms.request import RequestProxyer
-from ilms.utils import ProgressBar, unzip
+from ilms.utils import ProgressBar, unzip_all, check_is_download
 
 reqs = RequestProxyer()
 
@@ -90,10 +89,11 @@ class Handin(Item):
 
     def download(self):
         folder_name = 'download/%s-%s' % (self.account_id, self.authour)
+        if check_is_download(folder_name):
+            return
         for target in self.detail:
             download(target['id'], folder=folder_name)
-        for zip_file in glob.glob('%s/*.zip' % folder_name):
-            unzip(zip_file, folder_name)
+        unzip_all(folder_name)
 
     def __str__(self):
         return '<Homework Handin: %s>' % (self.authour)
