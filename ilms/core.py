@@ -128,7 +128,7 @@ class Course(Item):
         return '<Course: %s %s>' % (self.course_id, self.name.get('zh'))
 
 
-class System():
+class Core():
 
     def __init__(self, user):
         self.profile = None

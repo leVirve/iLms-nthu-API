@@ -14,8 +14,8 @@ pip install -U ilms-nthu
 ## Sample code
 
 ```python
-from ilms.ilms import User
-from ilms.ilms import System as iLms
+from ilms.core import User
+from ilms.core import Core as iLms
 
     user = User('<user_id>', '<password>')
     assert user.login()
