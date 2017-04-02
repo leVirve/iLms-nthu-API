@@ -18,26 +18,55 @@ from ilms.core import User
 from ilms.core import Core as iLms
 
 
-if __name__ == '__main__':
+user = User('<user_id>', '<password>')
+user.login()
+ilms = iLms(user)
 
-    user = User('<user_id>', '<password>')
-    assert user.login()
+''' 1. get your profile '''
+profile = ilms.get_profile()
 
-    ilms = iLms(user)
+''' 2. iterate through all your courses '''
+for cou in ilms.get_courses():
 
-    profile = ilms.get_profile()
+    ''' 2.a find out all homewrok information '''
+    for homework in cou.get_homeworks():
 
-    for cou in ilms.get_courses():
+        ''' 3. if you're TA, you should get this feature
+               to explore all the students' works !
+               [View the detail / Download files]
+        '''
+        for handin in homework.handin_list:
+            pprint(handin.detail)
+            handin.download()
 
-        for homework in cou.get_homeworks():
+    ''' 4. You can download all materials in few lines ! '''
+    for material in cou.get_materials():
+        print(material.detail)
+        material.download()
 
-            for handin in homework.handin_list:
-                pprint(handin.detail)
-                handin.download()
+    print(cou.get_forum_list().result)
+```
 
-        for material in cou.get_materials():
-            print(material.detail)
-            material.download()
+### Smart query container
 
-        print(cou.get_forum_list().result)
+Even, with `smart query` feature
+
+```python
+
+courses = ilms.get_courses()
+
+''' get the specific course with keyword '''
+course = courses.find(course_id='CS35700')
+
+homeworks = course.get_homeworks()
+
+''' get the specific homework (in two ways) '''
+hw1 = homeworks.get(0)
+hw1 = homeworks.find(title='Homework1')
+
+''' get the specific haned_in homework '''
+handin = hw1.get(87)
+handin = hw1.handin_list.find(authour='王曉明')
+handin = hw1.handin_list.find(date='2017-03-25')
+
 ```
