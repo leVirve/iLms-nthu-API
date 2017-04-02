@@ -59,3 +59,22 @@ def load_session():
         return None
     with open(filepath, 'rb') as f:
         return pickle.load(f)
+
+
+def stream_download(stream_resp, folder='download'):
+    filename = stream_resp.headers['content-disposition'].split("'")[-1]
+    filesize = int(stream_resp.headers['content-length'])
+
+    os.makedirs(folder, exist_ok=True)
+    path = os.path.join(folder, filename)
+
+    chunk_size = 1024
+    progress = ProgressBar()
+    progress.max = filesize // chunk_size
+    with open(path, 'wb') as f:
+        for chunk in stream_resp.iter_content(chunk_size=chunk_size):
+            if chunk:
+                f.write(chunk)
+            progress.next()
+    progress.finish()
+    return filename

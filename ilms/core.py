@@ -1,10 +1,8 @@
-import os
-
 from ilms import parser
 from ilms import exception
 from ilms.route import route
 from ilms.request import RequestProxyer
-from ilms.utils import ProgressBar, unzip_all, check_is_download
+from ilms.utils import unzip_all, check_is_download, stream_download
 
 reqs = RequestProxyer()
 
@@ -202,20 +200,4 @@ class Core():
 
 def download(attach_id, folder='download'):
     resp = reqs.get(route.attach.format(attach_id=attach_id), stream=True)
-
-    filename = resp.headers['content-disposition'].split("'")[-1]
-    filesize = int(resp.headers['content-length'])
-
-    os.makedirs(folder, exist_ok=True)
-    path = os.path.join(folder, filename)
-
-    chunk_size = 1024
-    progress = ProgressBar()
-    progress.max = filesize // chunk_size
-    with open(path, 'wb') as f:
-        for chunk in resp.iter_content(chunk_size=chunk_size):
-            if chunk:
-                f.write(chunk)
-            progress.next()
-    progress.finish()
-    return filename
+    stream_download(resp, folder)
