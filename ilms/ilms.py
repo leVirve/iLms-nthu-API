@@ -32,48 +32,79 @@ class User:
 
 class Item():
 
+    def __init__(self, raw, callee):
+        self.raw = raw
+        self.callee = callee
+        self.uid = raw['id']
+        self.insert_attrs(raw)
+
+    def insert_attrs(self, attrs):
+        for key, val in attrs.items():
+            setattr(self, key, val)
+
     def download(self):
-        for target in self.details:
+        for target in self.detail:
             download(target['id'])
+
+
+class Handin(Item):
+
+    @property
+    def detail(self):
+        if hasattr(self, '_detail'):
+            return self._detail
+        resp = reqs.get(
+            route.course(self.callee.callee.id).document(self.uid))
+        self._detail = parser.parse_homework_handin_detail(resp.text).result
+        return self._detail
+
+    def __str__(self):
+        return '<Homework Handin: %s>' % (self.authour)
 
 
 class Homework(Item):
 
-    def __init__(self, raw, callee):
-        self.raw = raw
-        self.callee = callee
-        self.uid = raw['id']
-
+    @property
     def detail(self):
+        if hasattr(self, '_detail'):
+            return self._detail
         resp = reqs.get(
-            route.course(self.callee.course_id).homework(self.uid))
-        self.details = parser.parse_homework_detail(resp.text).result
-        return self.details
+            route.course(self.callee.id).homework(self.uid))
+        self._detail = parser.parse_homework_detail(resp.text).result
+        return self._detail
+
+    @property
+    def handin_list(self):
+        if hasattr(self, '_handin_list'):
+            return self._handin_list
+        resp = reqs.get(
+            route.course(self.callee.id).homework_handin_list(self.uid))
+        self._handin_list = [
+            Handin(handin, callee=self)
+            for handin in parser.parse_homework_handin_list(resp.text).result
+        ]
+        return self._handin_list
+
+    def __str__(self):
+        return '<Homework: %s>' % (self.title)
 
 
 class Material(Item):
 
-    def __init__(self, raw, callee):
-        self.raw = raw
-        self.callee = callee
-        self.uid = raw['id']
-
+    @property
     def detail(self):
+        if hasattr(self, '_detail'):
+            return self._detail
         resp = reqs.get(
-            route.course(self.callee.course_id).document(self.uid))
-        self.details = parser.parse_material_detail(resp.text).result
-        return self.details
+            route.course(self.callee.id).document(self.uid))
+        self._detail = parser.parse_material_detail(resp.text).result
+        return self._detail
 
 
-class Course():
-
-    def __init__(self, raw, callee):
-        self.raw = raw
-        self.callee = callee
-        self.course_id = raw['id']
+class Course(Item):
 
     def get_homeworks(self):
-        resp = reqs.get(route.course(self.course_id).homework())
+        resp = reqs.get(route.course(self.uid).homework())
         self.homeworks = [
             Homework(homework, callee=self)
             for homework in parser.parse_homework_list(resp.text).result
@@ -81,7 +112,7 @@ class Course():
         return self.homeworks
 
     def get_materials(self, download=False):
-        resp = reqs.get(route.course(self.course_id).document())
+        resp = reqs.get(route.course(self.uid).document())
         self.materials = [
             Material(material, callee=self)
             for material in parser.parse_material_list(resp.text).result
@@ -90,8 +121,11 @@ class Course():
 
     def get_forum_list(self, page=1):
         resp = reqs.get(
-            route.course(self.course_id).forum() + '&page=%d' % page)
+            route.course(self.uid).forum() + '&page=%d' % page)
         return parser.parse_forum_list(resp.text)
+
+    def __str__(self):
+        return '<Course: %s %s>' % (self.course_id, self.name.get('zh'))
 
 
 class System():

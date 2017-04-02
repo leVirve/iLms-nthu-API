@@ -12,12 +12,14 @@ class CourseRoute():
         'forum_detail': 'forumlist',
         'homework_detail': 'hw',
         'document_detail': 'doc',
+        'homework_handin_list_detail': 'hw_doclist',
     }
 
     rule_key = {
         'forum_detail': 'tid',
         'homework_detail': 'hw',
         'document_detail': 'cid',
+        'homework_handin_list_detail': 'hw',
     }
 
     def __init__(self, course_id):
@@ -32,6 +34,7 @@ class CourseRoute():
         return path
 
     homework = partialmethod(gen_rule, 'homework')
+    homework_handin_list = partialmethod(gen_rule, 'homework_handin_list')
     document = partialmethod(gen_rule, 'document')
     forum = partialmethod(gen_rule, 'forum')
 

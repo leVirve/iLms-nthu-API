@@ -15,6 +15,14 @@ class ParseResult:
 pad = ['', ' ', '  ', '   ', ]
 
 
+def need_login(f):
+    def wrap(body, *args, **kwargs):
+        if '權限不足!' in body:
+            raise Exception('尚未登入')
+        return f(body, *args, **kwargs)
+    return wrap
+
+
 def parse_zh_en_course_name(course_name):
     course_name_en = re.findall('[A-Za-z()0-9 ]+', course_name)[-1]
     course_name_zh = course_name.replace(course_name_en, '')
@@ -39,6 +47,7 @@ def parse_profile(body):
     return pr
 
 
+@need_login
 def parse_course_list(body):
     pr = ParseResult(body)
     mnu = pr.soup.select('.mnu')[0]
@@ -58,6 +67,7 @@ def parse_course_list(body):
     return pr
 
 
+@need_login
 def parse_homework_list(body):
     pr = ParseResult(body)
     main = pr.soup.select_one('#main')
@@ -77,6 +87,7 @@ def parse_homework_list(body):
     return pr
 
 
+@need_login
 def parse_homework_detail(body):
     pr = ParseResult(body)
     tr = pr.soup.select('tr')
@@ -109,6 +120,58 @@ def parse_homework_detail(body):
              'size': re.sub('[()]', '', span.text)}
             for a, span in zip(td.select('a'), td.select('span'))
         ]
+    return pr
+
+
+@need_login
+def parse_homework_handin_list(body):
+    pr = ParseResult(body)
+    main = pr.soup.select_one('#main')
+    if '目前尚無資料' in main.text:
+        return pr
+
+    for row in main.select('tr')[1:]:
+        td = row.select('td')
+        href = td[1].select_one('a').get('href')
+        date = td[5].find('span').get('title')
+        status = {
+            'status_id': td[6].find('span').get('id'),
+            'text': td[6].text
+        }
+        score = {
+            'score_id': td[7].select('.hidden div')[1].get('id'),
+            'score_atag': td[7].select('.hidden div')[0].a
+        }
+        pr.result.append({
+            'id': re.match('.*cid=(\d+).*', href).group(1),
+            'title': td[1].text.strip(),
+            'account_id': td[2].text,
+            'authour': td[3].text,
+            'status': status,
+            'score': score,
+            'date_string': date,
+            'date': parse_datetime(date)
+        })
+    return pr
+
+
+@need_login
+def parse_homework_handin_detail(body):
+    pr = ParseResult(body)
+    main = pr.soup.select_one('#doc')
+    if '目前尚無資料' in main.text:
+        return pr
+
+    attaches = main.select_one('.attach .block').select('div')
+    for attach in attaches:
+        a = attach.select('a')[1]
+        hint = attach.select('.hint')[0]
+        pr.result.append({
+            'filename': a.get('title'),
+            'id': a.get('href').split('=')[-1],
+            'filesize': hint.text[1:-2]
+        })
+
     return pr
 
 
@@ -173,6 +236,8 @@ def parse_material_detail(body):
     pr = ParseResult(body)
     title = pr.soup.select_one('.doc .title').text.strip()
     content = pr.soup.select_one('.doc .article').text.strip()
+
+    attach = pr.soup.select_one('.attach .block')
     pr.extra = {'title': title, 'content': content}
     pr.result = [
         {
@@ -181,6 +246,6 @@ def parse_material_detail(body):
             'filesize': hint.text[1:-2]
         }
         for a, hint in zip(
-            pr.soup.select('.attach a')[::2], pr.soup.select('.attach  .hint'))
+            attach.select('a')[::2], attach.select('.hint'))
     ]
     return pr
