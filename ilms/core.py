@@ -1,9 +1,10 @@
 import os
+import glob
 
 from ilms import parser
 from ilms.route import route
 from ilms.request import RequestProxyer
-from ilms.utils import ProgressBar
+from ilms.utils import ProgressBar, unzip
 
 reqs = RequestProxyer()
 
@@ -57,6 +58,13 @@ class Handin(Item):
             route.course(self.callee.callee.id).document(self.uid))
         self._detail = parser.parse_homework_handin_detail(resp.text).result
         return self._detail
+
+    def download(self):
+        folder_name = 'download/%s-%s' % (self.account_id, self.authour)
+        for target in self.detail:
+            download(target['id'], folder=folder_name)
+        for zip_file in glob.glob('%s/*.zip' % folder_name):
+            unzip(zip_file, folder_name)
 
     def __str__(self):
         return '<Homework Handin: %s>' % (self.authour)
