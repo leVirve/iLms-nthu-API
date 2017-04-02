@@ -1,4 +1,4 @@
-from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='ilms-nthu',
@@ -8,6 +8,9 @@ setup(
         'beautifulsoup4',
         'lxml'
     ],
+    entry_points={
+        'console_scripts': ['ilms=ilms.cli:main'],
+    },
     version='0.0.3',
     description='iLms-NTHU API. An iLMS client for stduents, assistants and developers.',
     author='leVirve',
@@ -16,4 +19,16 @@ setup(
     license='MIT',
     platforms='any',
     keywords=['iLms', 'NTHU', 'API'],
-    classifiers=[],)
+    classifiers=[
+        'Development Status :: 3 - Alpha',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Customer Service',
+        'Intended Audience :: System Administrators',
+        'Topic :: Internet :: WWW/HTTP',
+        'Topic :: Software Development :: Libraries',
+        'Topic :: Text Processing',
+        'Topic :: Utilities',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6'
+    ],)
