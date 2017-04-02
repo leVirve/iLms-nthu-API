@@ -62,7 +62,7 @@ def parse_course_list(body):
         pr.result.append({
             'id': match.group(1),
             'name': parse_zh_en_course_name(course_a.text),
-            'course_id': fix_course_id_padding(course_id)
+            'course_id': course_id  # fix_course_id_padding(course_id)
         })
     return pr
 
@@ -130,6 +130,7 @@ def parse_homework_handin_list(body):
     if '目前尚無資料' in main.text:
         return pr
 
+    # TODO: in not TA mode, some attrs will fail
     for row in main.select('tr')[1:]:
         td = row.select('td')
         href = td[1].select_one('a').get('href')
