@@ -57,7 +57,10 @@ def unzip(filepath, dest_folder):
 
 def check_is_download(folder):
     zip_type = ['*.zip', '*.rar']
-    return any([glob.glob('%s/%s' % (folder, ztype))] for ztype in zip_type)
+    files = []
+    for ztype in zip_type:
+        files.extend(glob.glob('%s/%s' % (folder, ztype)))
+    return files
 
 
 def get_home_dir():
@@ -79,6 +82,20 @@ def load_session():
         return None
     with open(filepath, 'rb') as f:
         return pickle.load(f)
+
+
+def json_load(filename):
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except:
+        return {}
+
+
+def json_dump(data, filename):
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    with open(filename, 'w') as f:
+        json.dump(data, f, indent=4)
 
 
 def stream_download(stream_resp, folder='download'):
