@@ -143,6 +143,9 @@ class Material(Item):
         self._detail = parser.parse_material_detail(resp.text).result
         return self._detail
 
+    def __str__(self):
+        return '<Material: %s, %s hits>' % (self.標題, self.人氣)
+
 
 class Course(Item):
 
