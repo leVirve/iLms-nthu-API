@@ -2,7 +2,8 @@ from ilms import parser
 from ilms import exception
 from ilms.route import route
 from ilms.request import RequestProxyer
-from ilms.utils import unzip_all, check_is_download, stream_download
+from ilms.utils import (
+    unzip_all, check_is_download, stream_download, json_dump, json_load)
 
 reqs = RequestProxyer()
 
@@ -91,9 +92,8 @@ class Handin(Item):
         self._detail = parser.parse_homework_handin_detail(resp.text).result
         return self._detail
 
-    def download(self):
-        folder_name = 'download/%s-%s' % (self.account_id, self.authour)
-        # TODO: check by datetime
+    def download(self, root_folder):
+        folder_name = root_folder + '%s-%s' % (self.account_id, self.authour)
         if check_is_download(folder_name):
             return
         for target in self.detail:
@@ -127,6 +127,25 @@ class Homework(Item):
             callee=self
         )
         return self._handin_list
+
+    def download_handins(self):
+        root_folder = './download/%s/' % self.title
+        meta_path = root_folder + 'meta.json'
+        done_lut = json_load(meta_path)
+        try:
+            for handin in self.handin_list:
+                metadata = done_lut.get(handin.id)
+                if (metadata
+                   and metadata.get('date_string')
+                   and handin.date_string > metadata['date_string']):
+                    continue
+                print(handin)
+                handin.download(root_folder=root_folder)
+                done_lut[handin.id] = {'last_update': handin.date_string}
+        except Exception as e:
+            print('Catch exception', e, 'while downloading', handin)
+        finally:
+            json_dump(done_lut, meta_path)
 
     def __str__(self):
         return '<Homework: %s>' % (self.title)
