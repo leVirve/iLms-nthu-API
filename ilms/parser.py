@@ -134,6 +134,7 @@ def parse_homework_handin_list(body):
         return pr
 
     # TODO: in not TA mode, some attrs will fail
+    score_id_regex = re.compile('\d+score_(\d+)')
     for row in main.select('tr')[1:]:
         td = row.select('td')
         href = td[1].select_one('a').get('href')
@@ -142,8 +143,9 @@ def parse_homework_handin_list(body):
             'status_id': td[6].find('span').get('id'),
             'text': td[6].text
         }
+        score_id = td[7].select('.hidden div a')[0].get('id')
         score = {
-            'score_id': td[7].select('.hidden div')[1].get('id'),
+            'score_id': score_id_regex.match(score_id).group(1),
             'score_atag': td[7].select('.hidden div')[0].a
         }
         pr.result.append({

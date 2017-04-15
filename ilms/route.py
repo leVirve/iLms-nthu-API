@@ -46,6 +46,7 @@ class Routes():
         'profile': 'home/profile.php',
         'attach': 'sys/read_attach.php?id={attach_id}',
         'login_submit': 'sys/lib/ajax/login_submit.php',
+        'score': 'course/http_hw_score.php',
         'post': 'sys/lib/ajax/post.php'
     }
 

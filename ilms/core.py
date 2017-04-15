@@ -100,6 +100,16 @@ class Handin(Item):
             download(target['id'], folder=folder_name)
         unzip_all(folder_name)
 
+    def set_score(self, score):
+        score_id = self.score.get('score_id')
+        assert int(score_id)
+
+        params = {'score': score, 'id': score_id}
+        r = reqs.post(route.score, params=params)
+
+        assert r.ok
+        return r
+
     def __str__(self):
         return '<Homework Handin: %s>' % (self.authour)
 
