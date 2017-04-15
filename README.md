@@ -13,14 +13,75 @@ pip install -U ilms-nthu
 
 ## Sample code
 
+### Login to iLms
+
+- You need login for any operations that need priviledges.
+- login with helper function `get_account()`
+
+```python
+from ilms.core import User
+from ilms.core import Core as iLms
+from ilms.utils import get_account
+
+user = User(*get_account())
+assert user.login()
+
+# You can take your profile
+profile = ilms.get_profile()
+
+ilms = iLms(user)
+```
+
+### Query for courses
+
+```python
+# iterate through courses with loop
+for cou in ilms.get_courses():
+    cou.course_id
+    print(cou)
+
+# query with keyword
+courses = ilms.get_courses()
+cou = courses.find(course_id='CS35700')
+
+```
+
+### Download all hand-in homeworks
+
+```python
+from ilms.utils import load_score_csv
+
+homeworks = cou.get_homeworks()
+hw1 = homeworks.find(title='Homework1')
+
+hw1.download_handins()
+```
+
+### Grade the homeworks
+
+- Use helper function `load_score_csv()` to load the scores in csv file (contains only two columns, `student id` and `score`)
+- Can do some processes on the `score_map`, and then use `score_hanins` method to grading in bulk.
+
+```python
+from ilms.utils import load_score_csv
+
+homeworks = cou.get_homeworks()
+hw1 = homeworks.find(title='Homework1')
+
+score_map = load_score_csv('hw1-cs35700.csv')
+score_map = {
+    student_id: math.ceil(score)
+    for student_id, score in score_map.items()}
+
+hw1.score_handins(score_map)
+```
+
+### Full sample
+
 ```python
 from ilms.core import User
 from ilms.core import Core as iLms
 
-
-user = User('<user_id>', '<password>')
-user.login()
-ilms = iLms(user)
 
 ''' 1. get your profile '''
 profile = ilms.get_profile()
