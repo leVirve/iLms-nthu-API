@@ -11,8 +11,8 @@ setup(
     entry_points={
         'console_scripts': ['ilms=ilms.cli:main'],
     },
-    version='0.0.3',
-    description='iLms-NTHU API. An iLMS client for stduents, assistants and developers.',
+    version='0.0.3b',
+    description='iLms-NTHU API. An iLMS client for students, assistants and developers.',
     author='leVirve',
     author_email='gae.m.project@gmail.com',
     url='https://github.com/leVirve/iLms-nthu-API',

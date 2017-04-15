@@ -11,11 +11,32 @@ pip install -U ilms-nthu
 *Note: develop and test on Python3.5+*
 
 
+## Command
+
+- View all taken courses
+
+```bash
+ilms view courses
+```
+
+- Download all hand-in homeworks of students
+
+```bash
+ilms download handin --course_id CS35700 --hw_title Homework1
+```
+
+- Grade hand-ins of students with single `csv` file
+
+```bash
+ilms score --course_id CS35700 --hw_title Homework1 --score_csv hw1-cs3570.csv
+```
+
+
 ## Sample code
 
 ### Login to iLms
 
-- You need login for any operations that need priviledges.
+- You need login for any operations that need privileges.
 - login with helper function `get_account()`
 
 ```python

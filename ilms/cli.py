@@ -1,38 +1,71 @@
-import argparse
+import math
 
-import ilms
+import click
+
 from ilms.core import User, Core as iLms
-from ilms.utils import get_account
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    'action', help=('login / download / view'))
-parser.add_argument(
-    '--courses', action='store_true', help='List all courses in this semester.')
-parser.add_argument(
-    '-c', '--course_id', type=str, help='Specific course to view.')
-parser.add_argument(
-    '-V', '--version', action='version', version=ilms.__version__)
+from ilms.utils import get_account, load_score_csv
 
 
-def print_course_list(ilms):
-    for cou in ilms.get_courses():
-        print(cou)
+core = None
 
 
+@click.command()
+@click.argument('name')
+def view(name):
+
+    def print_course_list(ilms):
+        for cou in ilms.get_courses():
+            print(cou)
+
+    {
+        'course': print_course_list,
+        'homework': None,
+    }[name](core)
+
+
+@click.command()
+@click.argument('name')
+@click.option('--course_id', default='')
+@click.option('--hw_title', default='')
+def download(name, course_id, hw_title):
+
+    def download_handins(ilms):
+        cou = ilms.get_courses().find(course_id=course_id)
+        hw = cou.get_homeworks().find(title=hw_title)
+        hw.download_handins()
+        # if more specific options to download single file
+
+    {
+        'handin': download_handins,
+    }[name](core)
+
+
+@click.command()
+@click.option('--course_id', default='')
+@click.option('--hw_title', default='')
+@click.option('--score_csv', default='')
+def score(course_id, hw_title, score_csv):
+
+    cou = core.get_courses().find(course_id=course_id)
+    hw = cou.get_homeworks().find(title=hw_title)
+
+    score_map = load_score_csv(score_csv)
+    score_map = {
+        student_id: math.ceil(score)
+        for student_id, score in score_map.items()}
+
+    hw.score_handins(score_map)
+
+
+@click.group()
 def main(args=None):
-    args = args or parser.parse_args()
-
     _account, _password = get_account()
     user = User(_account, _password)
     assert user.login()
 
-    ilms = iLms(user)
+    global core
+    core = iLms(user)
 
-    if args.courses:
-        print_course_list(ilms)
-
-
-# ilms download handin --course_id CS35700 --homework Homework1
-# ilms download handin --course_id CS35700 --homework Homework1 --student 10502561 / 陳xx
-# ilms download material --course_id CS35700 --num 5
+main.add_command(view)
+main.add_command(score)
+main.add_command(download)
