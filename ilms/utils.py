@@ -1,4 +1,5 @@
 import os
+import csv
 import glob
 import json
 import pickle
@@ -96,6 +97,20 @@ def json_dump(data, filename):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
     with open(filename, 'w') as f:
         json.dump(data, f, indent=4)
+
+
+def load_score_csv(filepath):
+    with open(filepath, newline='') as csvfile:
+        spamreader = csv.reader(csvfile, delimiter=',')
+        rows = [row for row in spamreader]
+
+        score_map = {}
+        for entry in rows:
+            assert len(entry) == 2
+            student_id, score = entry
+            score_map[student_id] = float(score)
+
+        return score_map
 
 
 def stream_download(stream_resp, folder='download'):

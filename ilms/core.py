@@ -138,6 +138,18 @@ class Homework(Item):
         )
         return self._handin_list
 
+    def score_handins(self, score_map):
+        for handin in self.handin_list:
+            try:
+                assert handin.account_id in score_map
+
+                score = score_map[handin.account_id]
+                result = handin.set_score(score)
+
+                print(handin, result.json()['ret']['msg'])
+            except Exception as e:
+                print('Catch exception', e, 'while scoring', handin)
+
     def download_handins(self):
         root_folder = './download/%s/' % self.title
         meta_path = root_folder + 'meta.json'
