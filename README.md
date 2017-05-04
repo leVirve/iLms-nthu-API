@@ -19,6 +19,21 @@ pip install -U ilms-nthu
 ilms view courses
 ```
 
+- Download all course materials
+
+```bash
+ilms download material --course_id CS35700
+
+# keyword of cuorse id
+ilms download material --course_id 35700
+
+# keyword of cuorse name
+ilms download material --course 多媒體
+
+ilms download material --course CVFX
+
+```
+
 - Download all hand-in homeworks of students
 
 ```bash
@@ -61,10 +76,20 @@ for cou in ilms.get_courses():
     cou.course_id
     print(cou)
 
-# query with keyword
+# query with 'keyword', can be coures_id or partial course name in `en` or `zh`
 courses = ilms.get_courses()
 cou = courses.find(course_id='CS35700')
+cou = courses.find(name='視覺特效')
+cou = courses.find(name='Pattern Recog')
 
+```
+
+### Download all course material
+
+```python
+for material in cou.get_materials():
+    print(material)
+    material.download(root_folder='download/cvfx/')
 ```
 
 ### Download all hand-in homeworks

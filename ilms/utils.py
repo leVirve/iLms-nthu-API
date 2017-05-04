@@ -57,11 +57,10 @@ def unzip(filepath, dest_folder):
         zip_ref.close()
 
 
-def check_is_download(folder):
-    zip_type = ['*.zip', '*.rar']
+def check_is_download(folder, file_types):
     files = []
-    for ztype in zip_type:
-        files.extend(glob.glob('%s/%s' % (folder, ztype)))
+    for ftype in file_types:
+        files.extend(glob.glob('%s/%s' % (folder, ftype)))
     return files
 
 

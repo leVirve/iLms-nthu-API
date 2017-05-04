@@ -72,12 +72,21 @@ class ItemContainer():
     def get(self, x):
         return self.items[x]
 
-    def find(self, **kwargs):
+    def find(self, **query_kws):
         for item in self.items:
-            for k, v in kwargs.items():
-                value = getattr(item, k)
-                if value and isinstance(v, str) and v not in value:
+            for query_k, query_v in query_kws.items():
+                if not query_v:
                     break
+                targ = getattr(item, query_k)
+                if targ and isinstance(targ, str) and query_v not in targ:
+                    break
+                if targ and isinstance(targ, dict):
+                    for targ_k, targ_v in targ.items():
+                        if query_v in targ_v:
+                            print(query_v, targ_v)
+                            return item
+                    else:
+                        break
             else:
                 return item
 
@@ -95,7 +104,7 @@ class Handin(Item):
 
     def download(self, root_folder):
         folder_name = root_folder + '%s-%s' % (self.account_id, self.authour)
-        if check_is_download(folder_name):
+        if check_is_download(folder_name, ['*.zip', '*.rar']):
             return
         for target in self.detail:
             download(target['id'], folder=folder_name)
@@ -184,6 +193,13 @@ class Material(Item):
             route.course(self.callee.id).document(self.uid))
         self._detail = parser.parse_material_detail(resp.text).result
         return self._detail
+
+    def download(self, root_folder):
+        folder_name = root_folder + '%s' % self.標題
+        if check_is_download(folder_name, ['*.pdf', '*.ppt', '*.pptx']):
+            return
+        for target in self.detail:
+            download(target['id'], folder=folder_name)
 
     def __str__(self):
         return '<Material: %s, %s hits>' % (self.標題, self.人氣)

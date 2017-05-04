@@ -26,8 +26,9 @@ def view(name):
 @click.command()
 @click.argument('name')
 @click.option('--course_id', default='')
+@click.option('--course', default='')
 @click.option('--hw_title', default='')
-def download(name, course_id, hw_title):
+def download(name, course_id, course, hw_title):
 
     def download_handins(ilms):
         cou = ilms.get_courses().find(course_id=course_id)
@@ -35,8 +36,16 @@ def download(name, course_id, hw_title):
         hw.download_handins()
         # if more specific options to download single file
 
+    def download_materials(ilms):
+        cou = ilms.get_courses().find(course_id=course_id)
+        cou = cou or ilms.get_courses().find(name=course)
+        for material in cou.get_materials():
+            print(material)
+            material.download(root_folder='download/%s/' % cou.course_id)
+
     {
         'handin': download_handins,
+        'material': download_materials,
     }[name](core)
 
 
