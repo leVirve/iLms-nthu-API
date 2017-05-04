@@ -2,6 +2,8 @@
 
 An iLMS client for stduents, assistants and developers.
 
+![](download_sample.png)
+
 ## Install
 
 ```bash
@@ -24,10 +26,10 @@ ilms view courses
 ```bash
 ilms download material --course_id CS35700
 
-# keyword of cuorse id
+# keyword of course id
 ilms download material --course_id 35700
 
-# keyword of cuorse name
+# keyword of course name
 ilms download material --course 多媒體
 
 ilms download material --course CVFX
@@ -84,7 +86,7 @@ cou = courses.find(name='Pattern Recog')
 
 ```
 
-### Download all course material
+### Download all course materials
 
 ```python
 for material in cou.get_materials():
