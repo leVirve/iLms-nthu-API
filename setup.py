@@ -1,17 +1,26 @@
 from setuptools import setup
 
+
+def version():
+    with open('ilms/__init__.py') as f:
+        for line in f:
+            if line.startswith('__version__'):
+                return line.replace("'", '').split()[-1]
+
+
 setup(
     name='ilms-nthu',
     packages=['ilms'],
     install_requires=[
         'requests',
         'beautifulsoup4',
-        'lxml'
+        'lxml',
+        'click'
     ],
     entry_points={
         'console_scripts': ['ilms=ilms.cli:main'],
     },
-    version='0.0.3b',
+    version=version(),
     description='iLms-NTHU API. An iLMS client for students, assistants and developers.',
     author='leVirve',
     author_email='gae.m.project@gmail.com',
