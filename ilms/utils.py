@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 import glob
 import json
@@ -130,3 +131,8 @@ def stream_download(stream_resp, folder='download'):
             progress.next()
     progress.finish()
     return filename
+
+
+def safe_str(text):
+    encoding = sys.stdout.encoding
+    return text.encode(encoding, 'ignore').decode(encoding)

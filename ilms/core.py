@@ -3,7 +3,8 @@ from ilms import exception
 from ilms.route import route
 from ilms.request import RequestProxyer
 from ilms.utils import (
-    unzip_all, check_is_download, stream_download, json_dump, json_load)
+    unzip_all, check_is_download, stream_download,
+    json_dump, json_load, safe_str)
 
 reqs = RequestProxyer()
 
@@ -111,7 +112,7 @@ class Handin(Item):
         return r
 
     def __str__(self):
-        return '<Homework Handin: %s>' % (self.authour)
+        return safe_str('<Homework Handin: %s-%s>' % (self.account_id, self.authour))
 
 
 class Homework(Item):
