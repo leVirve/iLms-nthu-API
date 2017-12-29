@@ -14,6 +14,7 @@ class ParseResult:
         self.result = []
         self.extra = {}
 
+
 pad = ['', ' ', '  ', '   ', ]
 
 
@@ -127,7 +128,7 @@ def parse_homework_detail(body):
 
 
 @need_login_check
-def parse_homework_handin_list(body):
+def parse_homework_handin_list(body, is_group=False):
     pr = ParseResult(body)
     main = pr.soup.select_one('#main')
     if '目前尚無資料' in main.text:
@@ -143,11 +144,18 @@ def parse_homework_handin_list(body):
             'status_id': td[6].find('span').get('id'),
             'text': td[6].text
         }
-        score_id = td[7].select('.hidden div a')[0].get('id')
-        score = {
-            'score_id': score_id_regex.match(score_id).group(1),
-            'score_atag': td[7].select('.hidden div')[0].a
-        }
+        if is_group:
+            score_id = td[7].select('a')[0].get('id')
+            score = {
+                'score_id': score_id,
+                # TODO
+            }
+        else:
+            score_id = td[7].select('.hidden div a')[0].get('id')
+            score = {
+                'score_id': score_id_regex.match(score_id).group(1),
+                'score_atag': td[7].select('.hidden div')[0].a
+            }
         pr.result.append({
             'id': re.match('.*cid=(\d+).*', href).group(1),
             'title': td[1].text.strip(),

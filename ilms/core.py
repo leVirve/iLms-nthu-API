@@ -141,8 +141,12 @@ class Homework(Item):
             return self._handin_list
         resp = reqs.get(
             route.course(self.callee.id).homework_handin_list(self.uid))
+        parser_func = {
+            '?ˆ†çµ„ä½œæ¥?': lambda x: parser.parse_homework_handin_list(x, is_group=True),
+            '?€‹äººä?œæ¥?': parser.parse_homework_handin_list,
+        }[self.detail['extra']['å±¬æ€¡±']]
         self._handin_list = ItemContainer(
-            parser.parse_homework_handin_list(resp.text),
+            parser_func(resp.text),
             instance=Handin,
             callee=self
         )
