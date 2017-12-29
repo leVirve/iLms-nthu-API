@@ -10,6 +10,13 @@ from ilms.utils import get_account, load_score_csv
 core = None
 
 
+def query_helper(container, **kwarg):
+    key, value = list(kwarg.items())[0]
+    if not value:
+        value = input('%s: ' % key)
+    return container.find(**{key: value})
+
+
 @click.command()
 @click.argument('name')
 @click.option('--course_id', default='')
@@ -21,7 +28,7 @@ def view(name, course_id, verbose):
             print(cou)
 
     def print_homework_list(ilms):
-        cou = ilms.get_courses().find(course_id=course_id)
+        cou = query_helper(ilms.get_courses(), course_id=course_id)
         for hw in cou.get_homeworks():
             verbose and pprint.pprint(hw.detail) or print(hw)
 
@@ -40,15 +47,15 @@ def view(name, course_id, verbose):
 def download(name, course_id, course, hw_title, folder):
 
     def download_handins(ilms):
-        cou = ilms.get_courses().find(course_id=course_id)
-        hw = cou.get_homeworks().find(title=hw_title)
+        cou = query_helper(ilms.get_courses(), course_id=course_id)
+        hw = query_helper(cou.get_homeworks(), title=hw_title)
         root_folder = folder or 'download/%s/' % hw.title
         print(hw, '-> into', root_folder)
         hw.download_handins(root_folder)
         # if more specific options to download single file
 
     def download_materials(ilms):
-        cou = ilms.get_courses().find(course_id=course_id)
+        cou = query_helper(ilms.get_courses(), course_id=course_id)
         cou = cou or ilms.get_courses().find(name=course)
         for material in cou.get_materials():
             root_folder = folder or 'download/%s/' % cou.course_id
@@ -64,13 +71,13 @@ def download(name, course_id, course, hw_title, folder):
 @click.command()
 @click.option('--course_id', default='')
 @click.option('--hw_title', default='')
-@click.option('--score_csv', default='')
-def score(course_id, hw_title, score_csv):
+@click.option('--csv', default='')
+def score(course_id, hw_title, csv):
 
-    cou = core.get_courses().find(course_id=course_id)
-    hw = cou.get_homeworks().find(title=hw_title)
+    cou = query_helper(core.get_courses(), course_id=course_id)
+    hw = query_helper(cou.get_homeworks(), title=hw_title)
 
-    score_map = load_score_csv(score_csv)
+    score_map = load_score_csv(csv or input('Path to csv sheet: '))
     score_map = {
         student_id: math.ceil(score)
         for student_id, score in score_map.items()}
