@@ -6,6 +6,7 @@ import json
 import pickle
 import zipfile
 import getpass
+import urllib.parse
 from pip._vendor.progress.bar import ShadyBar
 
 import ilms
@@ -118,6 +119,7 @@ def stream_download(stream_resp, folder='download'):
     filesize = int(stream_resp.headers['content-length'])
 
     os.makedirs(folder, exist_ok=True)
+    filename = urllib.parse.unquote(filename)
     path = os.path.join(folder, filename)
 
     chunk_size = 1024
