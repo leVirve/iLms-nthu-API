@@ -1,4 +1,5 @@
 import math
+import pprint
 
 import click
 
@@ -11,15 +12,22 @@ core = None
 
 @click.command()
 @click.argument('name')
-def view(name):
+@click.option('--course_id', default='')
+@click.option('--verbose', is_flag=True)
+def view(name, course_id, verbose):
 
     def print_course_list(ilms):
         for cou in ilms.get_courses():
             print(cou)
 
+    def print_homework_list(ilms):
+        cou = ilms.get_courses().find(course_id=course_id)
+        for hw in cou.get_homeworks():
+            verbose and pprint.pprint(hw.detail) or print(hw)
+
     {
         'course': print_course_list,
-        'homework': None,
+        'homework': print_homework_list,
     }[name](core)
 
 
@@ -74,6 +82,7 @@ def main(args=None):
 
     global core
     core = iLms(user)
+
 
 main.add_command(view)
 main.add_command(score)
