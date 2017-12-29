@@ -1,3 +1,5 @@
+import os
+
 from ilms import parser
 from ilms import exception
 from ilms.route import route
@@ -103,7 +105,7 @@ class Handin(Item):
         return self._detail
 
     def download(self, root_folder):
-        folder_name = root_folder + '%s-%s' % (self.account_id, self.authour)
+        folder_name = os.path.join(root_folder, '%s-%s' % (self.account_id, self.authour))
         if check_is_download(folder_name, ['*.zip', '*.rar']):
             return
         for target in self.detail:
@@ -142,9 +144,9 @@ class Homework(Item):
         resp = reqs.get(
             route.course(self.callee.id).homework_handin_list(self.uid))
         parser_func = {
-            '?��組作�?': lambda x: parser.parse_homework_handin_list(x, is_group=True),
-            '?��人�?��?': parser.parse_homework_handin_list,
-        }[self.detail['extra']['屬怡�']]
+            '分組作業': lambda x: parser.parse_homework_handin_list(x, is_group=True),
+            '個人作業': parser.parse_homework_handin_list,
+        }[self.detail['extra']['屬性']]
         self._handin_list = ItemContainer(
             parser_func(resp.text),
             instance=Handin,
@@ -164,9 +166,8 @@ class Homework(Item):
             except Exception as e:
                 print('Catch exception', e, 'while scoring', handin)
 
-    def download_handins(self):
-        root_folder = './download/%s/' % self.title
-        meta_path = root_folder + 'meta.json'
+    def download_handins(self, root_folder):
+        meta_path = os.path.join(root_folder, 'meta.json')
         done_lut = json_load(meta_path)
         try:
             for handin in self.handin_list:
@@ -199,7 +200,7 @@ class Material(Item):
         return self._detail
 
     def download(self, root_folder):
-        folder_name = root_folder + '%s' % self.標題
+        folder_name = os.path.join(root_folder, '%s' % self.標題)
         if check_is_download(folder_name, ['*.pdf', '*.ppt', '*.pptx']):
             return
         for target in self.detail:
