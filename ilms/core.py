@@ -168,14 +168,14 @@ class Homework(Item):
             for handin in self.handin_list:
                 metadata = done_lut.get(handin.id)
                 if (metadata
-                   and metadata.get('date_string')
-                   and handin.date_string > metadata['date_string']):
+                   and metadata.get('last_update')
+                   and handin.date_string >= metadata['last_update']):
                     continue
                 print(handin)
                 handin.download(root_folder=root_folder)
                 done_lut[handin.id] = {'last_update': handin.date_string}
         except Exception as e:
-            print('Catch exception', e, 'while downloading', handin)
+            print('Catch exception', e, 'while downloading')
         finally:
             json_dump(done_lut, meta_path)
 
