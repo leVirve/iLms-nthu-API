@@ -19,8 +19,8 @@ def query_helper(container, **kwarg):
 
 @click.command()
 @click.argument('name')
-@click.option('--course_id', default='')
-@click.option('--verbose', is_flag=True)
+@click.option('--course_id', default='', help='課號關鍵字')
+@click.option('--verbose', is_flag=True, help='顯示詳細資訊')
 def view(name, course_id, verbose):
 
     def print_course_list(ilms):
@@ -40,10 +40,10 @@ def view(name, course_id, verbose):
 
 @click.command()
 @click.argument('name')
-@click.option('--course_id', default='')
-@click.option('--course', default='')
-@click.option('--hw_title', default='')
-@click.option('--folder', default='')
+@click.option('--course_id', default='', help='課號關鍵字')
+@click.option('--course', default='', help='課程名稱關鍵字')
+@click.option('--hw_title', default='', help='作業標題')
+@click.option('--folder', default='', help='下載至...資料夾')
 def download(name, course_id, course, hw_title, folder):
 
     def download_handins(ilms):
@@ -69,9 +69,9 @@ def download(name, course_id, course, hw_title, folder):
 
 
 @click.command()
-@click.option('--course_id', default='')
-@click.option('--hw_title', default='')
-@click.option('--csv', default='')
+@click.option('--course_id', default='', help='課號關鍵字')
+@click.option('--hw_title', default='', help='作業標題')
+@click.option('--csv', default='', help='CSV 成績表')
 def score(course_id, hw_title, csv):
 
     cou = query_helper(core.get_courses(), course_id=course_id)
