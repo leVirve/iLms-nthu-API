@@ -1,19 +1,23 @@
 # iLMS NTHU
 
-An iLMS client for stduents, assistants and developers.
+專為 學生/助教/開發者 所寫的 iLMS 通用 API/command-line 環境
 
-![](download_sample.png)
+![download_command_sample](download_sample.png)
 
-## Install
+## 安裝
 
-```bash
-pip install -U ilms-nthu
-```
+*注意: 本專案開發測試在 Python3.5+*
 
-*Note: develop and test on Python3.5+*
+- 從 `PyPI` 上安裝
+    ```bash
+    pip install -U ilms-nthu
+    ```
+- 從本專案原始碼安裝最新版
+    ```bash
+    pip install git+https://github.com/leVirve/iLms-nthu-API
+    ```
 
-
-## Command
+## 指令
 
 - View all taken courses
 
