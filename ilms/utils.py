@@ -1,31 +1,19 @@
-import os
-import sys
 import csv
+import getpass
 import glob
 import json
+import os
 import pickle
-import zipfile
-import getpass
+import re
+import sys
 import urllib.parse
-from pip._vendor.progress.bar import ShadyBar
+import zipfile
+
+import tqdm
 
 import ilms
 
-
-class ProgressBar(ShadyBar):
-
-    suffix = ' %(percent).1f%%'
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def calc_step(self, size):
-        if size < 10:
-            self.max = size
-            return 1
-        else:
-            self.max = size // 10
-            return 10
+mime_filename_pattern = re.compile('.*?filename="(.+)"')
 
 
 def get_account():
@@ -101,7 +89,7 @@ def json_dump(data, filename):
 
 
 def load_score_csv(filepath):
-    with open(filepath, newline='') as csvfile:
+    with open(filepath, newline='', encoding='utf8') as csvfile:
         spamreader = csv.reader(csvfile, delimiter=',')
         rows = [row for row in spamreader]
 
@@ -114,23 +102,22 @@ def load_score_csv(filepath):
         return score_map
 
 
-def stream_download(stream_resp, folder='download'):
-    filename = stream_resp.headers['content-disposition'].split("'")[-1]
-    filesize = int(stream_resp.headers['content-length'])
+def stream_download(r, folder='download'):
+    filesize = int(r.headers['content-length'])
+    filename = r.headers['content-disposition']
+    filename = mime_filename_pattern.match(filename).group(1)
 
     os.makedirs(folder, exist_ok=True)
     filename = urllib.parse.unquote(filename)
     path = os.path.join(folder, filename)
 
-    chunk_size = 1024
-    progress = ProgressBar()
-    progress.max = filesize // chunk_size
-    with open(path, 'wb') as f:
-        for chunk in stream_resp.iter_content(chunk_size=chunk_size):
-            if chunk:
-                f.write(chunk)
-            progress.next()
-    progress.finish()
+    chunk_size = 2048
+    with tqdm.tqdm(total=filesize // chunk_size, ascii=True, leave=False) as p:
+        with open(path, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=chunk_size):
+                if chunk:
+                    f.write(chunk)
+                p.update(1)
     return filename
 
 

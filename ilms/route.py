@@ -47,6 +47,8 @@ class Routes():
         'attach': 'sys/read_attach.php?id={attach_id}',
         'login_submit': 'sys/lib/ajax/login_submit.php',
         'score': 'course/http_hw_score.php',
+        'query_group': 'course/hw_group_score.php?courseID={course_id}&folderID={folder_id}&teamID={team_id}',
+        'group_score': 'update_group_score',
         'post': 'sys/lib/ajax/post.php'
     }
 

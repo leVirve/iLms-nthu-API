@@ -8,4 +8,4 @@ if not os.path.exists(_ilms_dir):
 
 _config_file = os.path.expanduser(os.path.join(_ilms_dir, 'ilms.json'))
 
-__version__ = '0.2.0'
+__version__ = '0.2.4'

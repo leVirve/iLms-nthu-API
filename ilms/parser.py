@@ -1,8 +1,8 @@
 import re
 from datetime import datetime
-
-# from html2text import html2text
+from collections import defaultdict
 from bs4 import BeautifulSoup
+from pyquery import PyQuery
 
 from ilms import exception
 
@@ -15,7 +15,34 @@ class ParseResult:
         self.extra = {}
 
 
-pad = ['', ' ', '  ', '   ', ]
+class ParsedReseponse:
+
+    def __init__(self, resp):
+        self.resp = resp
+        self._html = None
+        self._soup = None
+
+    @property
+    def html(self):
+        if self._html is None:
+            self._html = self._make_pyquery(self.resp)
+        return self._html
+
+    @property
+    def soup(self):
+        if self._soup is None:
+            self._soup = self._make_beautifulsoup(self.resp)
+        return self._soup
+
+    @classmethod
+    def _make_pyquery(cls, resp):
+        resp.encoding = 'utf-8'
+        return PyQuery(resp.text)
+
+    @classmethod
+    def _make_beautifulsoup(cls, resp):
+        resp.encoding = 'utf-8'
+        return BeautifulSoup(resp.text, 'lxml')
 
 
 def need_login_check(f):
@@ -32,77 +59,93 @@ def parse_zh_en_course_name(course_name):
     return {'en': course_name_en, 'zh': course_name_zh}
 
 
-def fix_course_id_padding(course_id):
-    dept = re.search('[A-Z]+', course_id).group()
-    dept_padded = dept + pad[4 - len(dept)]
-    return course_id.replace(dept, dept_padded)
-
-
 def parse_datetime(date_string):
     return datetime.strptime(date_string, '%Y-%m-%d %H:%M:%S')
 
 
-@need_login_check
-def parse_profile(body):
-    pr = ParseResult(body)
-    name = pr.soup.select_one('#fmName').get('value')
-    email = pr.soup.select_one('#fmEmail').get('value')
-    pr.result = {'name': name, 'email': email}
-    return pr
+course_id_in_link = re.compile('/course/(\d+)')
 
 
 @need_login_check
-def parse_course_list(body):
-    pr = ParseResult(body)
-    mnu = pr.soup.select('.mnu')[0]
-    course_url_regex = re.compile('/course/(\d+)')
+def parse_course_list(r):
+    pr = ParsedReseponse(r)
 
-    for item in mnu.select('.mnuItem'):
+    result = []
+    for item in pr.html('.mnu .mnuItem'):
         course_a = item.find('a')
-        match = course_url_regex.match(course_a.get('href'))
+        match = course_id_in_link.match(course_a.get('href'))
         if not match:
             continue
         course_id = re.sub('[()]', '', item.find('span').text)
-        pr.result.append({
+        result.append({
             'id': match.group(1),
+            'course_id': course_id,
+            'course_link': course_a.get('href'),
             'name': parse_zh_en_course_name(course_a.text),
-            'course_id': course_id  # fix_course_id_padding(course_id)
         })
-    return pr
+    return result
 
 
 @need_login_check
-def parse_homework_list(body):
-    pr = ParseResult(body)
+def parse_all_course_list(r):
+    pr = ParsedReseponse(r)
+    result = defaultdict(list)
+
+    def parse_row(i, row, target):
+        cols = [e for e in PyQuery(row)('td').items()]
+        result[target].append({
+            'id': course_id_in_link.match(cols[1]('a').attr('href')).group(1),
+            'course_id': cols[0].text(),
+            'course_link': cols[1]('a').attr('href'),
+            'name': parse_zh_en_course_name(cols[1].text()),
+            'teacher': cols[2].text(),
+            'credit': cols[3].text(),
+            'grade': cols[4].text(),
+        })
+
+    for title, table in zip(
+            pr.html('.tblTitle div:first'), pr.html('table').items()):
+        table('tr:not(:first-child)').each(lambda i, e: parse_row(i, e, title.text))
+
+    return result
+
+
+@need_login_check
+def parse_homework_list(r):
+    pr = ParsedReseponse(r)
+    result = []
+
     main = pr.soup.select_one('#main')
     if '目前尚無資料' in main.text:
-        return pr
+        return result
 
     for row in main.select('tr')[1:]:
         td = row.find_all('td')
         href = td[1].select_one('a').get('href')
         date = td[4].find('span').get('title')
-        pr.result.append({
+        result.append({
             'id': re.match('.*hw=(\d+).*', href).group(1),
             'title': td[1].text.strip(),
             'date_string': date,
             'date': parse_datetime(date)
         })
-    return pr
+
+    return result
 
 
 @need_login_check
-def parse_homework_detail(body):
-    pr = ParseResult(body)
+def parse_homework_detail(r):
+    pr = ParsedReseponse(r)
     tr = pr.soup.select('tr')
+    result = []
 
     def trs_helper(trs):
         for row in trs:
             k, v = row.select('td')
             yield k.text, v.text
 
-    pr.result = {'title': pr.soup.select_one('#main span.curr').text.strip()}
-    pr.result['extra'] = {
+    result = {'title': pr.soup.select_one('#main span.curr').text.strip()}
+    result['extra'] = {
         k: v
         for i, (k, v) in enumerate(trs_helper(tr))
         if i not in [0, 5, 6, 7]
@@ -110,32 +153,37 @@ def parse_homework_detail(body):
     }
 
     date = tr[5].select('td')[1].text + ':00'
-    pr.result['date_string'] = date
-    pr.result['date'] = parse_datetime(date)
+    result['date_string'] = date
+    result['date'] = parse_datetime(date)
 
-    pr.result['content'] = tr[6].select('td')[1].text  # not rich text
-    pr.result['links'] = [a.get('href') for a in tr[7].select('a')]
+    result['content'] = tr[6].select('td')[1].text  # not rich text
+    result['links'] = [a.get('href') for a in tr[7].select('a')]
 
     td = tr[7].select('td')[1]
     attach_id_regex = re.compile('.*id=(\d+).*')
-    pr.result['attachments'] = [
+    result['attachments'] = [
             {'name': a.text.strip(),
              'id': attach_id_regex.match(a.get('href')).group(1),
              'size': re.sub('[()]', '', span.text)}
             for a, span in zip(td.select('a'), td.select('span'))
         ]
-    return pr
+    return result
 
 
 @need_login_check
-def parse_homework_handin_list(body, is_group=False):
-    pr = ParseResult(body)
+def parse_homework_handin_list(r, is_group=False):
+    pr = ParsedReseponse(r)
+    result = []
+
     main = pr.soup.select_one('#main')
     if '目前尚無資料' in main.text:
-        return pr
+        return result
 
     # TODO: in not TA mode, some attrs will fail
     score_id_regex = re.compile('\d+score_(\d+)')
+    folder_id_pattern = re.compile('folderID=(\d+)')
+    team_id_pattern = re.compile('editGroupScore\("(\d+)"\)')
+
     for row in main.select('tr')[1:]:
         td = row.select('td')
         href = td[1].select_one('a').get('href')
@@ -145,10 +193,9 @@ def parse_homework_handin_list(body, is_group=False):
             'text': td[6].text
         }
         if is_group:
-            score_id = td[7].select('a')[0].get('id')
             score = {
-                'score_id': score_id,
-                # TODO
+                'folder_id': folder_id_pattern.findall(pr.html.text())[0],
+                'team_id': team_id_pattern.findall(td[7].select('a')[0].get('href'))[0]
             }
         else:
             score_id = td[7].select('.hidden div a')[0].get('id')
@@ -156,7 +203,7 @@ def parse_homework_handin_list(body, is_group=False):
                 'score_id': score_id_regex.match(score_id).group(1),
                 'score_atag': td[7].select('.hidden div')[0].a
             }
-        pr.result.append({
+        result.append({
             'id': re.match('.*cid=(\d+).*', href).group(1),
             'title': td[1].text.strip(),
             'account_id': td[2].text,
@@ -166,27 +213,29 @@ def parse_homework_handin_list(body, is_group=False):
             'date_string': date,
             'date': parse_datetime(date)
         })
-    return pr
+    return result
 
 
 @need_login_check
-def parse_homework_handin_detail(body):
-    pr = ParseResult(body)
+def parse_homework_handin_detail(r):
+    pr = ParsedReseponse(r)
+    result = []
+
     main = pr.soup.select_one('#doc')
     if '目前尚無資料' in main.text:
-        return pr
+        return result
 
     attaches = main.select_one('.attach .block').select('div')
     for attach in attaches:
         a = attach.select('a')[1]
         hint = attach.select('.hint')[0]
-        pr.result.append({
+        result.append({
             'filename': a.get('title'),
             'id': a.get('href').split('=')[-1],
             'filesize': hint.text[1:-2]
         })
 
-    return pr
+    return result
 
 
 @need_login_check
@@ -235,8 +284,10 @@ def parse_post_detail(json):
 
 
 @need_login_check
-def parse_material_list(body):
-    pr = ParseResult(body)
+def parse_material_list(r):
+    pr = ParsedReseponse(r)
+    result = []
+
     rows = pr.soup.select('tr')
     head = [e.text for e in rows[0].select('td')]
     for row in rows[1:]:
@@ -245,19 +296,21 @@ def parse_material_list(body):
             for k, v in zip(head, row.select('td'))
         }
         item['id'] = row.select_one('a').get('href').split('=')[-1]
-        pr.result.append(item)
-    return pr
+        result.append(item)
+
+    return result
 
 
 @need_login_check
-def parse_material_detail(body):
-    pr = ParseResult(body)
-    title = pr.soup.select_one('.doc .title').text.strip()
-    content = pr.soup.select_one('.doc .article').text.strip()
+def parse_material_detail(r):
+    pr = ParsedReseponse(r)
+
+    # title = pr.soup.select_one('.doc .title').text.strip()
+    # content = pr.soup.select_one('.doc .article').text.strip()
+    # extra = {'title': title, 'content': content}
 
     attach = pr.soup.select_one('.attach .block')
-    pr.extra = {'title': title, 'content': content}
-    pr.result = [
+    result = [
         {
             'filename': a.get('title'),
             'id': a.get('href').split('=')[-1],
@@ -266,4 +319,4 @@ def parse_material_detail(body):
         for a, hint in zip(
             attach.select('a')[::2], attach.select('.hint'))
     ]
-    return pr
+    return result

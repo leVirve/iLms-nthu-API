@@ -1,52 +1,58 @@
 import os
+import re
+
+import requests
 
 from ilms import parser
 from ilms import exception
 from ilms.route import route
-from ilms.request import RequestProxyer
 from ilms.utils import (
     unzip_all, check_is_download, stream_download,
     json_dump, json_load, safe_str)
 
-reqs = RequestProxyer()
+session = requests.Session()
 
 
 class User:
+    '''
+    profile: dict() of login return status, containing 'email', 'name',
+             'phone', 'info', 'divName', 'divCode'
+    '''
 
     def __init__(self, user, pwd):
         self.user = user
         self.pwd = pwd
-        self.email = None
-
-    def check_login(self):
-        try:
-            resp = reqs.get(route.profile)
-            parser.parse_profile(resp.text)
-            return True
-        except exception.PermissionDenied:
-            return False
+        self.session = session
+        self.session.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                          'AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/67.0.3379.0 Safari/537.36',
+            'Refer': route.home,
+        }
+        self.profile = None
 
     def login(self):
-        if self.check_login():
-            return True
-        resp = reqs.post(
+        r = self.session.post(
                 route.login_submit,
-                data={'account': self.user, 'password': self.pwd})
-        json = resp.json()
-        if json['ret']['status'] == 'false':
-            raise exception.LoginError
-        self.email = json['ret']['email']
-        reqs.save_session()
-        return json
+                data={'account': self.user, 'password': self.pwd}
+            )
+        r = r.json()['ret']
+
+        status = r.pop('status')
+        if status == 'false':
+            raise exception.LoginError(r['msg'])
+
+        self.profile = r
+        return True
 
 
 class Item():
 
-    def __init__(self, raw, callee):
+    def __init__(self, raw, addtional):
         self.raw = raw
-        self.callee = callee
         self.uid = raw['id']
         self.insert_attrs(raw)
+        self.insert_attrs(addtional)
 
     def insert_attrs(self, attrs):
         for key, val in attrs.items():
@@ -59,11 +65,8 @@ class Item():
 
 class ItemContainer():
 
-    def __init__(self, parse_result, instance, callee):
-        self.items = [
-            instance(item, callee=callee)
-            for item in parse_result.result
-        ]
+    def __init__(self, elements, base_item, addtional={}):
+        self.items = [base_item(e, addtional) for e in elements]
 
     def __getitem__(self, x):
         return self.items[x]
@@ -97,11 +100,9 @@ class Handin(Item):
 
     @property
     def detail(self):
-        if hasattr(self, '_detail'):
-            return self._detail
-        resp = reqs.get(
-            route.course(self.callee.callee.id).document(self.uid))
-        self._detail = parser.parse_homework_handin_detail(resp.text).result
+        if not hasattr(self, '_detail'):
+            r = session.get(route.course(self.course_id).document(self.uid))
+            self._detail = parser.parse_homework_handin_detail(r)
         return self._detail
 
     def download(self, root_folder):
@@ -113,11 +114,19 @@ class Handin(Item):
         unzip_all(folder_name)
 
     def set_score(self, score):
+        if self.is_group:
+            r = session.get(route.query_group.format(
+                course_id=self.course_id,
+                folder_id=self.score['folder_id'],
+                team_id=self.score['team_id']))
+            # import pdb; pdb.set_trace()
+            raise Exception('not implemented yet 2018/03/28')
+
         score_id = self.score.get('score_id')
         assert int(score_id)
 
         params = {'score': score, 'id': score_id}
-        r = reqs.post(route.score, params=params)
+        r = session.post(route.score, params=params)
 
         assert r.ok
         return r
@@ -130,39 +139,32 @@ class Homework(Item):
 
     @property
     def detail(self):
-        if hasattr(self, '_detail'):
-            return self._detail
-        resp = reqs.get(
-            route.course(self.callee.id).homework(self.uid))
-        self._detail = parser.parse_homework_detail(resp.text).result
+        if not hasattr(self, '_detail'):
+            r = session.get(route.course(self.course_id).homework(self.uid))
+            self._detail = parser.parse_homework_detail(r)
         return self._detail
 
     @property
-    def handin_list(self):
-        if hasattr(self, '_handin_list'):
-            return self._handin_list
-        resp = reqs.get(
-            route.course(self.callee.id).homework_handin_list(self.uid))
-        parser_func = {
-            '分組作業': lambda x: parser.parse_homework_handin_list(x, is_group=True),
-            '個人作業': parser.parse_homework_handin_list,
-        }[self.detail['extra']['屬性']]
-        self._handin_list = ItemContainer(
-            parser_func(resp.text),
-            instance=Handin,
-            callee=self
-        )
-        return self._handin_list
+    def handins(self):
+        if not hasattr(self, '_handins'):
+            r = session.get(route.course(self.course_id).homework_handin_list(self.uid))
+            is_group = self.detail['extra']['屬性'] == '分組作業'  # or '個人作業'
+            self._handins = ItemContainer(
+                parser.parse_homework_handin_list(r, is_group),
+                Handin, {'course_id': self.course_id, 'is_group': is_group})
+        return self._handins
 
     def score_handins(self, score_map):
-        for handin in self.handin_list:
+        for handin in self.handins[1:2]:
             try:
-                assert handin.account_id in score_map
-
-                score = score_map[handin.account_id]
+                account = handin.account_id
+                if handin.is_group:
+                    account = re.findall('\d+', account)[0]
+                score = score_map[account]
                 result = handin.set_score(score)
-
                 print(handin, result.json()['ret']['msg'])
+            except KeyError:
+                print('缺少 %s 的分數' % handin.account_id)
             except Exception as e:
                 print('Catch exception', e, 'while scoring', handin)
 
@@ -170,7 +172,7 @@ class Homework(Item):
         meta_path = os.path.join(root_folder, 'meta.json')
         done_lut = json_load(meta_path)
         try:
-            for handin in self.handin_list:
+            for handin in self.handins:
                 metadata = done_lut.get(handin.id)
                 if (metadata
                    and metadata.get('last_update')
@@ -192,11 +194,9 @@ class Material(Item):
 
     @property
     def detail(self):
-        if hasattr(self, '_detail'):
-            return self._detail
-        resp = reqs.get(
-            route.course(self.callee.id).document(self.uid))
-        self._detail = parser.parse_material_detail(resp.text).result
+        if not hasattr(self, '_detail'):
+            r = session.get(route.course(self.course_id).document(self.uid))
+            self._detail = parser.parse_material_detail(r)
         return self._detail
 
     def download(self, root_folder):
@@ -213,27 +213,30 @@ class Material(Item):
 class Course(Item):
 
     def get_homeworks(self):
-        resp = reqs.get(route.course(self.uid).homework())
+        r = session.get(route.course(self.uid).homework())
         self.homeworks = ItemContainer(
-            parser.parse_homework_list(resp.text),
-            instance=Homework,
-            callee=self
+            parser.parse_homework_list(r),
+            Homework, {'course_id': self.uid}
         )
         return self.homeworks
 
     def get_materials(self, download=False):
-        resp = reqs.get(route.course(self.uid).document())
+        r = session.get(route.course(self.uid).document())
         self.materials = ItemContainer(
-            parser.parse_material_list(resp.text),
-            instance=Material,
-            callee=self
+            parser.parse_material_list(r),
+            Material, {'course_id': self.uid}
         )
         return self.materials
 
     def get_forum_list(self, page=1):
-        resp = reqs.get(
+        resp = session.get(
             route.course(self.uid).forum() + '&page=%d' % page)
         return parser.parse_forum_list(resp.text)
+
+    def get_group_list(self):
+        resp = session.get(
+            route.course(self.uid).forum() + '&page=%d' % page)
+        return parser.parse_group_list(resp.text)
 
     def __str__(self):
         return '<Course: %s %s>' % (self.course_id, self.name.get('zh'))
@@ -242,28 +245,34 @@ class Course(Item):
 class Core():
 
     def __init__(self, user):
-        self.profile = None
-        self.courses = None
+        self.user = user
+        self._courses = None
+        self._all_courses = None
 
-    def get_profile(self):
-        resp = reqs.get(route.profile)
-        self.profile = parser.parse_profile(resp.text)
-        return self.profile
+    @property
+    def courses(self) -> ItemContainer:
+        if self._courses is None:
+            r = session.get(route.home)
+            parsed = parser.parse_course_list(r)
+            self._courses = ItemContainer(parsed, Course)
+        return self._courses
 
-    def get_courses(self):
-        resp = reqs.get(route.home)
-        self.courses = ItemContainer(
-            parser.parse_course_list(resp.text),
-            instance=Course,
-            callee=self
-        )
-        return self.courses
+    @property
+    def all_courses(self) -> dict:
+        if self._all_courses is None:
+            r = session.get('%s?f=allcourse' % route.home)
+            parsed = parser.parse_all_course_list(r)
+            self._all_courses = {
+                key: ItemContainer(cous, Course)
+                for key, cous in parsed.items()
+            }
+        return self._all_courses
 
     def get_post_detail(self, post_id):
-        resp = reqs.post(route.post, data={'id': post_id})
+        resp = session.post(route.post, data={'id': post_id})
         return parser.parse_post_detail(resp.json())
 
 
 def download(attach_id, folder='download'):
-    resp = reqs.get(route.attach.format(attach_id=attach_id), stream=True)
+    resp = session.get(route.attach.format(attach_id=attach_id), stream=True)
     stream_download(resp, folder)
