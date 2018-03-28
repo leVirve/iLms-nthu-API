@@ -2,11 +2,11 @@
 
 專為 學生/助教/開發者 所寫的 iLMS 通用 API/command-line 環境
 
-![download_command_sample](download_sample.png)
+- 列出 修課課程 / 作業 / 上課教材
+- 下載 作業 / 上課教材
+- 上傳 `csv` 檔登記作業分數
 
 ## 安裝
-
-*注意: 本專案開發測試在 Python3.5+*
 
 - 從 `PyPI` 上安裝
     ```bash
@@ -17,45 +17,103 @@
     pip install git+https://github.com/leVirve/iLms-nthu-API
     ```
 
+Note: 本專案開發測試在 Python3.5+
+
 ## 指令
 
-- View all taken courses
+### 列出 修課課程 / 作業 / 上課教材
 
-```bash
-ilms view courses
-```
+- 列出本學期所有課程
+    ```bash
+    ilms view course
+    ```
 
-- Download all course materials
+- 列出所有修過課程
+    ```bash
+    ilms view course --semester_id all
+    ```
 
-```bash
-ilms download material --course_id CS35700
+- 列出某學期修過課程, e.g.
+    ```bash
+    ilms view course --semester_id 1051
+    ```
 
-# keyword of course id
-ilms download material --course_id 35700
+- 列出某課程所有作業, e.g.
+    ```bash
+    ilms view homework --course_id CS65500
+    ```
 
-# keyword of course name
-ilms download material --course 多媒體
+- 完整指令
+    ```bash
+    Usage: ilms view [OPTIONS] 查詢項目
 
-ilms download material --course CVFX
+    選擇查詢項目 課程 / 作業 / 上課教材 ['course', 'homework', 'material']
 
-```
+    Options:
+        --semester_id TEXT  學期
+        --course_id TEXT    課號關鍵字
+        --verbose           顯示詳細資訊
+        --help              Show this message and exit.
+    ```
 
-- Download all hand-in homeworks of students
+### 下載 作業 / 上課教材
 
-```bash
-ilms download handin --course_id CS35700 --hw_title Homework1
-```
+- 下載所有上課教材, e.g.
 
-- Grade hand-ins of students with single `csv` file
+    ```bash
+    ilms download material --course_id CS35700
 
-```bash
-ilms score --course_id CS35700 --hw_title Homework1 --score_csv hw1-cs3570.csv
-```
+    # 只需輸入課號 (course id) 關鍵字
+    ilms download material --course_id 35700
 
+    # 只需輸入課程中英文名稱關鍵字
+    ilms download material --course 多媒體
+    ilms download material --course CVFX
 
-## Sample code
+    ```
 
-### Login to iLms
+- [助教模式 TA mode] 下載所有學生作業, e.g.
+
+    ```bash
+    ilms download handin --course_id CS35700 --hw_title Homework1
+    ```
+
+- 完整指令
+    ```bash
+    Usage: ilms download [OPTIONS] NAME
+
+    選擇下載項目 上課教材 / 繳交作業 (助教) ['material', 'handin']
+
+    Options:
+        --course_id TEXT  課號關鍵字
+        --course TEXT     課程名稱關鍵字
+        --hw_title TEXT   作業標題
+        --folder TEXT     下載至...資料夾
+        --help            Show this message and exit.
+    ```
+
+### 登記成績
+
+- [助教模式 TA mode] 透過上傳分數 `csv` 檔登記分數, e.g.
+
+    ```bash
+    ilms score --course_id CS35700 --hw_title Homework1 --score_csv hw1-cs3570.csv
+    ```
+
+- 完整指令
+    ```bash
+    Usage: ilms score [OPTIONS]
+
+    Options:
+        --course_id TEXT  課號關鍵字
+        --hw_title TEXT   作業標題
+        --csv TEXT        CSV 成績表
+        --help            Show this message and exit.
+    ```
+
+## 範例程式 API Demo
+
+### 登入 iLms
 
 - You need login for any operations that need privileges.
 - login with helper function `get_account()`
@@ -74,7 +132,7 @@ profile = ilms.get_profile()
 ilms = iLms(user)
 ```
 
-### Query for courses
+### 查詢/搜尋課程
 
 ```python
 # iterate through courses with loop
@@ -90,7 +148,7 @@ cou = courses.find(name='Pattern Recog')
 
 ```
 
-### Download all course materials
+### 下載所有上課教材
 
 ```python
 for material in cou.get_materials():
@@ -98,7 +156,7 @@ for material in cou.get_materials():
     material.download(root_folder='download/cvfx/')
 ```
 
-### Download all hand-in homeworks
+### 下載所有繳交作業檔案
 
 ```python
 from ilms.utils import load_score_csv
@@ -109,7 +167,7 @@ hw1 = homeworks.find(title='Homework1')
 hw1.download_handins()
 ```
 
-### Grade the homeworks
+### 為作業登記分數
 
 - Use helper function `load_score_csv()` to load the scores in csv file (contains only two columns, `student id` and `score`)
 - Can do some processes on the `score_map`, and then use `score_hanins` method to grading in bulk.
@@ -128,7 +186,7 @@ score_map = {
 hw1.score_handins(score_map)
 ```
 
-### Full sample
+### 完整範例
 
 ```python
 from ilms.core import User
@@ -160,7 +218,7 @@ for cou in ilms.get_courses():
     print(cou.get_forum_list().result)
 ```
 
-### Smart query container
+### 智慧查詢資料結構 Smart query container
 
 Even, with `smart query` feature
 
