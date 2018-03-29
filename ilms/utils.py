@@ -24,14 +24,19 @@ def get_account():
         if _account and _password:
             return _account, _password
 
-    _config = {'account': input('iLms account:'),
-               'password': getpass.getpass(prompt='Password:')}
+    _config = {'account': input('iLMS account: '),
+               'password': getpass.getpass(prompt='Password: ')}
     _account = _config.get('account')
     _password = _config.get('password')
     with open(ilms._config_file, 'w') as f:
         f.write(json.dumps(_config, indent=4))
 
     return _account, _password
+
+
+def remove_account_file():
+    if os.path.exists(ilms._config_file):
+        os.remove(ilms._config_file)
 
 
 def unzip_all(folder_name):

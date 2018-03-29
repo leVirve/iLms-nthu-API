@@ -90,7 +90,6 @@ class ItemContainer():
                 if targ and isinstance(targ, dict):
                     for targ_k, targ_v in targ.items():
                         if query_v in targ_v:
-                            print(query_v, targ_v)
                             return item
                     else:
                         break

@@ -80,7 +80,7 @@ Note: 本專案開發測試在 Python3.5+
 
 - 完整指令
     ```bash
-    Usage: ilms download [OPTIONS] NAME
+    Usage: ilms download [OPTIONS] 下載項目
 
     選擇下載項目 上課教材 / 繳交作業 (助教) ['material', 'handin']
 
@@ -111,6 +111,12 @@ Note: 本專案開發測試在 Python3.5+
         --csv TEXT        CSV 成績表
         --help            Show this message and exit.
     ```
+
+### 登出 iLMS-NTHU API
+
+```bash
+ilms logout
+```
 
 ## 範例程式 API Demo
 

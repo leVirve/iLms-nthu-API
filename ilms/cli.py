@@ -5,10 +5,14 @@ from functools import partial
 import click
 
 from ilms.core import User, Core as iLms
-from ilms.utils import get_account, load_score_csv
+from ilms.utils import get_account, load_score_csv, remove_account_file
 
 
-core = None
+def aquire_core():
+    _account, _password = get_account()
+    user = User(_account, _password)
+    assert user.login()
+    return iLms(user)
 
 
 def query_helper(container, query, prompt):
@@ -35,16 +39,22 @@ def _heuristic_find_course(ilms, semester_id, course_kw):
                 if cou:
                     break
 
+    ''' No such course '''
+    if cou is None:
+        print('查無此課程!')
+        exit()
+
+    print('\n=== 課程 ===\n', cou)
     return cou
 
 
 @click.command()
-@click.argument('func')
+@click.argument('name')
 @click.option('--semester_id', default=None, help='學期')
 @click.option('--course', default='', help='課號關鍵字')
 @click.option('--verbose', is_flag=True, help='顯示詳細資訊')
-def view(func, semester_id, course, verbose):
-    ''' 選擇查詢項目 課程 / 作業 / 上課教材 ['course', 'homework', 'material']
+def view(name, semester_id, course, verbose):
+    ''' 選擇查詢項目 課程 / 作業 / 上課教材
     '''
 
     def print_course_list(ilms):
@@ -71,11 +81,12 @@ def view(func, semester_id, course, verbose):
         for mat in cou.get_materials():
             verbose and pprint.pprint(mat.detail) or print(mat)
 
+    core = aquire_core()
     {
         'course': print_course_list,
         'homework': print_homework_list,
         'material': print_material_list,
-    }[func](core)
+    }[name](core)
 
 
 @click.command()
@@ -84,7 +95,7 @@ def view(func, semester_id, course, verbose):
 @click.option('--hw_title', default='', help='作業標題')
 @click.option('--folder', default='', help='下載至...資料夾')
 def download(name, course, hw_title, folder):
-    ''' 選擇下載項目 上課教材 / 繳交作業 (助教) ['material', 'handin']
+    ''' 選擇下載項目 上課教材 / 繳交作業 (助教)
     '''
 
     def download_handins(ilms):
@@ -102,6 +113,7 @@ def download(name, course, hw_title, folder):
             print(material, '-> into', root_folder)
             material.download(root_folder=root_folder)
 
+    core = aquire_core()
     {
         'handin': download_handins,
         'material': download_materials,
@@ -113,6 +125,8 @@ def download(name, course, hw_title, folder):
 @click.option('--hw_title', default='', help='作業標題')
 @click.option('--csv', default='', help='CSV 成績表')
 def score(course, hw_title, csv):
+    ''' 登記分數 '''
+    core = aquire_core()
 
     cou = _heuristic_find_course(core, None, course)
     hw = query_helper(cou.get_homeworks(), title=hw_title)
@@ -125,16 +139,23 @@ def score(course, hw_title, csv):
     hw.score_handins(score_map)
 
 
-@click.group()
-def main(args=None):
-    _account, _password = get_account()
-    user = User(_account, _password)
-    assert user.login()
+@click.command()
+def logout():
+    ''' 登出 iLMS-NTHU API '''
+    try:
+        remove_account_file()
+    except Exception as e:
+        print('無法登出:', e)
+    finally:
+        print('成功登出')
 
-    global core
-    core = iLms(user)
+
+@click.group()
+def main():
+    pass
 
 
 main.add_command(view)
 main.add_command(score)
 main.add_command(download)
+main.add_command(logout)
