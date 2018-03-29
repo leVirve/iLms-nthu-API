@@ -1,5 +1,6 @@
 import math
 import pprint
+from functools import partial
 
 import click
 
@@ -10,33 +11,39 @@ from ilms.utils import get_account, load_score_csv
 core = None
 
 
-def query_helper(container, **kwarg):
-    key, value = list(kwarg.items())[0]
+def query_helper(container, query, prompt):
+    key, value = list(query.items())[0]
     if not value:
-        value = input('%s: ' % key)
-    return container.find(**{key: value})
+        value = input('%s: ' % prompt)
+        for k, v in query.items():
+            query[k] = value
+    return container.find(**query)
 
 
-def _find_course(ilms, semester_id, course_id):
-    if semester_id is None:
-        cou = query_helper(ilms.courses, course_id=course_id)
+def _heuristic_find_course(ilms, semester_id, course_kw):
+    possible_query = {'course_id': course_kw, 'name': course_kw}
+    _find_course = partial(query_helper, query=possible_query, prompt='輸入課程關鍵字')
+
+    if semester_id:
+        cou = _find_course(ilms.all_courses[semester_id])
     else:
-        cou = query_helper(ilms.all_courses[semester_id],
-                           course_id=course_id)
-    if cou is None:
-        for sem, courses in ilms.all_courses.items():
-            cou = query_helper(courses, course_id=course_id)
-            if cou:
-                break
+        cou = _find_course(ilms.courses)
+
+        if cou is None:
+            for sem, courses in ilms.all_courses.items():
+                cou = _find_course(courses)
+                if cou:
+                    break
+
     return cou
 
 
 @click.command()
 @click.argument('func')
 @click.option('--semester_id', default=None, help='學期')
-@click.option('--course_id', default='', help='課號關鍵字')
+@click.option('--course', default='', help='課號關鍵字')
 @click.option('--verbose', is_flag=True, help='顯示詳細資訊')
-def view(func, semester_id, course_id, verbose):
+def view(func, semester_id, course, verbose):
     ''' 選擇查詢項目 課程 / 作業 / 上課教材 ['course', 'homework', 'material']
     '''
 
@@ -55,12 +62,12 @@ def view(func, semester_id, course_id, verbose):
                 print(cou)
 
     def print_homework_list(ilms):
-        cou = _find_course(ilms, semester_id, course_id)
+        cou = _heuristic_find_course(ilms, semester_id, course)
         for hw in cou.get_homeworks():
             verbose and pprint.pprint(hw.detail) or print(hw)
 
     def print_material_list(ilms):
-        cou = _find_course(ilms, semester_id, course_id)
+        cou = _heuristic_find_course(ilms, semester_id, course)
         for mat in cou.get_materials():
             verbose and pprint.pprint(mat.detail) or print(mat)
 
@@ -73,16 +80,15 @@ def view(func, semester_id, course_id, verbose):
 
 @click.command()
 @click.argument('name')
-@click.option('--course_id', default='', help='課號關鍵字')
-@click.option('--course', default='', help='課程名稱關鍵字')
+@click.option('--course', default='', help='課程關鍵字')
 @click.option('--hw_title', default='', help='作業標題')
 @click.option('--folder', default='', help='下載至...資料夾')
-def download(name, course_id, course, hw_title, folder):
+def download(name, course, hw_title, folder):
     ''' 選擇下載項目 上課教材 / 繳交作業 (助教) ['material', 'handin']
     '''
 
     def download_handins(ilms):
-        cou = _find_course(ilms, None, course_id)
+        cou = _heuristic_find_course(ilms, None, course)
         hw = query_helper(cou.get_homeworks(), title=hw_title)
         root_folder = folder or 'download/%s/' % hw.title
         print(hw, '-> into', root_folder)
@@ -90,8 +96,7 @@ def download(name, course_id, course, hw_title, folder):
         # if more specific options to download single file
 
     def download_materials(ilms):
-        cou = _find_course(ilms, None, course_id)
-        cou = cou or ilms.courses.find(name=course)
+        cou = _heuristic_find_course(ilms, None, course)
         for material in cou.get_materials():
             root_folder = folder or 'download/%s/' % cou.course_id
             print(material, '-> into', root_folder)
@@ -104,12 +109,12 @@ def download(name, course_id, course, hw_title, folder):
 
 
 @click.command()
-@click.option('--course_id', default='', help='課號關鍵字')
+@click.option('--course', default='', help='課程關鍵字')
 @click.option('--hw_title', default='', help='作業標題')
 @click.option('--csv', default='', help='CSV 成績表')
-def score(course_id, hw_title, csv):
+def score(course, hw_title, csv):
 
-    cou = _find_course(core, None, course_id)
+    cou = _heuristic_find_course(core, None, course)
     hw = query_helper(cou.get_homeworks(), title=hw_title)
 
     score_map = load_score_csv(csv or input('Path to csv sheet: '))

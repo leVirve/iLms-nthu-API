@@ -40,7 +40,10 @@ Note: 本專案開發測試在 Python3.5+
 
 - 列出某課程所有作業, e.g.
     ```bash
-    ilms view homework --course_id CS65500
+    # 只需輸入 課號 (course id)/課程中英文 關鍵字
+    ilms view homework --course CS65500
+    ilms view homework --course Vision
+    ilms view homework --course 電腦視覺
     ```
 
 - 完整指令
@@ -51,7 +54,7 @@ Note: 本專案開發測試在 Python3.5+
 
     Options:
         --semester_id TEXT  學期
-        --course_id TEXT    課號關鍵字
+        --course TEXT       課程關鍵字
         --verbose           顯示詳細資訊
         --help              Show this message and exit.
     ```
@@ -61,21 +64,18 @@ Note: 本專案開發測試在 Python3.5+
 - 下載所有上課教材, e.g.
 
     ```bash
-    ilms download material --course_id CS35700
-
-    # 只需輸入課號 (course id) 關鍵字
-    ilms download material --course_id 35700
-
-    # 只需輸入課程中英文名稱關鍵字
+    # 只需輸入 課號 (course id)/課程中英文 關鍵字
+    ilms download material --course 35700
     ilms download material --course 多媒體
-    ilms download material --course CVFX
-
+    ilms download material --course Visual Effects
     ```
 
 - [助教模式 TA mode] 下載所有學生作業, e.g.
 
     ```bash
-    ilms download handin --course_id CS35700 --hw_title Homework1
+    # --course 課號 (course id)/課程中英文 關鍵字
+    # --hw_title 作業標題 關鍵字
+    ilms download handin --course CS35700 --hw_title Homework1
     ```
 
 - 完整指令
@@ -85,8 +85,7 @@ Note: 本專案開發測試在 Python3.5+
     選擇下載項目 上課教材 / 繳交作業 (助教) ['material', 'handin']
 
     Options:
-        --course_id TEXT  課號關鍵字
-        --course TEXT     課程名稱關鍵字
+        --course TEXT     課程關鍵字
         --hw_title TEXT   作業標題
         --folder TEXT     下載至...資料夾
         --help            Show this message and exit.
@@ -97,7 +96,9 @@ Note: 本專案開發測試在 Python3.5+
 - [助教模式 TA mode] 透過上傳分數 `csv` 檔登記分數, e.g.
 
     ```bash
-    ilms score --course_id CS35700 --hw_title Homework1 --score_csv hw1-cs3570.csv
+    # --course 課號 (course id)/課程中英文 關鍵字
+    # --hw_title 作業標題 關鍵字
+    ilms score --course CS35700 --hw_title Homework1 --score_csv hw1-cs3570.csv
     ```
 
 - 完整指令
@@ -105,7 +106,7 @@ Note: 本專案開發測試在 Python3.5+
     Usage: ilms score [OPTIONS]
 
     Options:
-        --course_id TEXT  課號關鍵字
+        --course TEXT     課程關鍵字
         --hw_title TEXT   作業標題
         --csv TEXT        CSV 成績表
         --help            Show this message and exit.

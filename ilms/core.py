@@ -83,8 +83,10 @@ class ItemContainer():
                 if not query_v:
                     break
                 targ = getattr(item, query_k)
-                if targ and isinstance(targ, str) and query_v not in targ:
-                    break
+                # if targ and isinstance(targ, str) and query_v not in targ:
+                #     break
+                if targ and isinstance(targ, str) and query_v in targ:
+                    return item
                 if targ and isinstance(targ, dict):
                     for targ_k, targ_v in targ.items():
                         if query_v in targ_v:
