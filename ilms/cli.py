@@ -100,7 +100,7 @@ def download(name, course, hw_title, folder):
 
     def download_handins(ilms):
         cou = _heuristic_find_course(ilms, None, course)
-        hw = query_helper(cou.get_homeworks(), title=hw_title)
+        hw = query_helper(cou.get_homeworks(), {'title': hw_title}, prompt='作業標題')
         root_folder = folder or 'download/%s/' % hw.title
         print(hw, '-> into', root_folder)
         hw.download_handins(root_folder)

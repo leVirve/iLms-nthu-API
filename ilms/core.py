@@ -172,8 +172,8 @@ class Homework(Item):
     def download_handins(self, root_folder):
         meta_path = os.path.join(root_folder, 'meta.json')
         done_lut = json_load(meta_path)
-        try:
-            for handin in self.handins:
+        for handin in self.handins:
+            try:
                 metadata = done_lut.get(handin.id)
                 if (metadata
                    and metadata.get('last_update')
@@ -182,10 +182,10 @@ class Homework(Item):
                 print(handin)
                 handin.download(root_folder=root_folder)
                 done_lut[handin.id] = {'last_update': handin.date_string}
-        except Exception as e:
-            print('Catch exception', e, 'while downloading')
-        finally:
-            json_dump(done_lut, meta_path)
+            except Exception as e:
+                print('Catch exception', e, 'while downloading')
+            finally:
+                json_dump(done_lut, meta_path)
 
     def __str__(self):
         return '<Homework: %s>' % (self.title)
