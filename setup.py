@@ -14,6 +14,8 @@ setup(
     install_requires=[
         'requests',
         'beautifulsoup4',
+        'pyquery',
+        'tqdm',
         'lxml',
         'click'
     ],
