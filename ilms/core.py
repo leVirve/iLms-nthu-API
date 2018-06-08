@@ -77,16 +77,19 @@ class ItemContainer():
     def get(self, x):
         return self.items[x]
 
-    def find(self, **query_kws):
+    def find(self, strict=False, **query_kws):
         for item in self.items:
             for query_k, query_v in query_kws.items():
                 if not query_v:
                     break
                 targ = getattr(item, query_k)
-                # if targ and isinstance(targ, str) and query_v not in targ:
-                #     break
-                if targ and isinstance(targ, str) and query_v in targ:
-                    return item
+
+                if targ and isinstance(targ, str):
+                    if query_v not in targ and strict:
+                        break
+                    elif query_v in targ and not strict:
+                        return item
+
                 if targ and isinstance(targ, dict):
                     for targ_k, targ_v in targ.items():
                         if query_v in targ_v:

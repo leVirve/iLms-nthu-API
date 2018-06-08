@@ -15,13 +15,13 @@ def aquire_core():
     return iLms(user)
 
 
-def query_helper(container, query, prompt):
+def query_helper(container, query, prompt, strict=False):
     key, value = list(query.items())[0]
     if not value:
         value = input('%s: ' % prompt)
         for k, v in query.items():
             query[k] = value
-    return container.find(**query)
+    return container.find(**query, strict=strict)
 
 
 def _heuristic_find_course(ilms, semester_id, course_kw):
@@ -100,7 +100,7 @@ def download(name, course, hw_title, folder):
 
     def download_handins(ilms):
         cou = _heuristic_find_course(ilms, None, course)
-        hw = query_helper(cou.get_homeworks(), {'title': hw_title}, prompt='作業標題')
+        hw = query_helper(cou.get_homeworks(), {'title': hw_title}, prompt='作業標題', strict=True)
         root_folder = folder or 'download/%s/' % hw.title
         print(hw, '-> into', root_folder)
         hw.download_handins(root_folder)
